@@ -29,13 +29,16 @@ benchmark:
 #---- TOOLS ----------
 SingleR:
   threads: 1 
+  gene_selection: "intersection"
 
 Correlation:
   threads: 1 
+  gene_selection: "intersection"
 
 scPred:
   threads: 1
   classifier: 'svmRadial'  
+  gene_selection: "intersection"
 
 scClassify:
   threads: 1 
@@ -47,71 +50,91 @@ scClassify:
   prob_threshold: 0.7
   cor_threshold_static: 0.5
   cor_threshold_high: 0.7
+  gene_selection: "intersection"
 
 SciBet:
   threads: 1
+  gene_selection: "intersection"
 
 singleCellNet:
   threads: 1
   nTrees: 500 
+  gene_selection: "intersection"
 
 scHPL:
   threads: 1
   classifier: 'svm'
   dimred: 'False'
   threshold: 0.5
+  gene_selection: "intersection"
 
 SVMlinear:
   threads: 1
   threshold: 0
   classifier: 'SVMlinear'
+  gene_selection: "intersection"
 
 SVC:
   threads: 1
   classifier: 'rbf'
   threshold: 0.5
+  gene_selection: "intersection"
 
 ACTINN:
   threads: 1
+  gene_selection: "intersection"
 
 scLearn:
   threads: 1
   bootstrap_times: 10
+  gene_selection: "intersection"
 
 scID:
   threads: 1
   estimate_weights_from_target: False
   logFC: 0.5
+  gene_selection: "intersection"
 
 scAnnotate:
   threads: 1
   threshold: 0.5
-
+  gene_selection: "intersection"
+  
 scNym:
   threads: 1
   threshold: 0.5
+  gene_selection: "intersection"
 
 CellTypist:
   threads: 1 
   feature_selection: 'True'
   majority_voting: 'True'
   threshold: 0.5
+  gene_selection: "intersection"
 
 Seurat:
   threads: 1
   nPC_computed: 50
   nPC_used: 30
   integration_method: 'CCAIntegration'
+  gene_selection: "intersection"
+
+scPoli:
+  threads: 1
+  gene_selection: "intersection"
 
 scANVI:
   threshold: 0.5
+  gene_selection: "intersection"
   
 Symphony:
   threads: 1
   nPC_computed: 50
+  gene_selection: "intersection"
 
 CellBlast:
   threads: 1
   threshold: 0.5
   n_models: 4
+  gene_selection: "intersection"
 #-----------------

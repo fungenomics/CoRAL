@@ -80,23 +80,26 @@ def set_ontology_parameters(config,mode):
     config["references"][ref]["ontology"]["ontology_column"] = ['label'] + config["references"][ref]["ontology"]["ontology_column"]
 
 # return consensus methods 
-def get_consensus_methods(config): 
+def get_consensus_methods(config,mode= "None"): 
   import sys 
+  if mode == 'benchmarking':
+    if config["consensus"]["type"]["majority"]["min_agree"][0] == 0:
+      sys.exit("@ The minimum number of tools required to agree in the majority consensus should be specified")
+  else:
+    consensus_run = []
+    if config["consensus"]["type"]["majority"]["min_agree"][0] != 0:
+      consensus_run.append("majority")
+    
+    if (config["consensus"]["type"]["CAWPE"]["alpha"][0] != 0) & (config["consensus"]["type"]["CAWPE"]["mode"] != ""):
+      consensus_run.append("CAWPE")
+    
+    if len(consensus_run) == 0:
+      sys.exit("@ At least one consensus type should be specified")
   
-  consensus_run = []
-  if config["consensus"]["type"]["majority"]["min_agree"][0] != 0:
-    consensus_run.append("majority")
-  
-  if (config["consensus"]["type"]["CAWPE"]["alpha"][0] != 0) & (config["consensus"]["type"]["CAWPE"]["mode"] != ""):
-    consensus_run.append("CAWPE")
-  
-  if len(consensus_run) == 0:
-    sys.exit("@ At least one consensus type should be specified")
-
-  return consensus_run
+    return consensus_run
 
 # return the tools to run adding the models to scPred
-def get_tools_to_run(config):
+def get_tools_to_run(config, mode = "None"):
   tools_run = config['tools_to_run']
   if "scPred" in tools_run:
     method = config['scPred']['classifier']
@@ -106,6 +109,9 @@ def get_tools_to_run(config):
     tools_to_run = [tool + "_" + m if tool == "scPred" else tool for tool in tools_run for m in (method if tool == "scPred" else [""])]
   else:
     tools_to_run = tools_run
+  if mode == "pretrain" and any(tool in tools_to_run for tool in ["scNym","scAnnotate","scID"]):
+    import sys
+    sys.exit("scNym/scAnnotate/scID cannot be run in the pretrain pipeline (it cannot be split into train and test). Please remove it from your config file and rerun the pipeline.")
   return(tools_to_run)
 
 # return the tools to run adding the models to scPred
@@ -120,3 +126,11 @@ def get_consensus_tools(config):
       consensus_to_run = [tool + "_" + m if tool == "scPred" else tool for tool in consensus_to_run for m in (method if tool == "scPred" else [""])]
   return(consensus_to_run)
 
+# return the feature selection methods specified
+def get_feature_selection_method(config):
+  tools_run = config['tools_to_run']
+  feature_selection_methods = []
+  for tool in tools_run:
+    if config[tool]['gene_selection'] not in feature_selection_methods:
+      feature_selection_methods.append(config[tool]['gene_selection'])
+  return(feature_selection_methods)

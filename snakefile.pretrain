@@ -1,0 +1,639 @@
+
+#----------------------------------------------------
+#  Setup
+#----------------------------------------------------
+
+configfile: workflow.basedir + "/Config/config.default.yml"
+
+# import libraries
+import os
+import sys
+import pandas as pd
+from datetime import datetime
+
+# import custom functions 
+sys.path.insert(0, Path(workflow.basedir).parent.as_posix())
+import Scripts.Functions.functions as func
+
+now = datetime.now()
+dt_string = now.strftime("%Y-%m-%d_%H-%M-%S")
+
+# set default parameters
+func.set_reference_batch_parameters(config)
+func.set_downsampling_parameters(config)
+#func.set_ontology_parameters(config, mode = 'annotation')
+func.set_gene_conversion_parameters(config)
+func.set_benchmark_directory(config, mode = 'annotation')
+print(config)
+
+# get consensus methods to run 
+#consensus_run = func.get_consensus_methods(config)
+
+# get tools to run
+tools_to_run = func.get_tools_to_run(config,mode = "pretrain")
+
+#----------------------------------------------------
+#  Final rule all 
+#----------------------------------------------------
+
+rule all:
+  input:
+    expand(config['output_dir'] + '/model/{reference}/{tool}/{tool}_successfully_trained.txt',
+      reference=config['references'],
+      tool=tools_to_run
+    )
+
+#----------------------------------------------------
+#  Preprocess
+#----------------------------------------------------
+
+rule preprocess:
+  input:
+    reference = lambda wildcards:config['references'][wildcards.reference]['expression']
+  output:
+    reference = config['output_dir'] + "/model/{reference}/expression_complete.csv",
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  log: 
+    config['output_dir'] + "/model/{reference}/preprocess.log"
+  params:
+    basedir = {workflow.basedir},
+    labfile = lambda wildcards:config['references'][wildcards.reference]['labels'],
+    batch_path = lambda wildcards:config['references'][wildcards.reference]['batch'],
+    out = config['output_dir'],
+    convert_genes = lambda wildcards:config["references"][wildcards.reference]['convert_ref_mm_to_hg'],
+    reference_name = "{reference}",
+    min_cells_per_cluster = lambda wildcards:config["references"][wildcards.reference]['min_cells_per_cluster'],
+    downsample_value = lambda wildcards:config["references"][wildcards.reference]['downsample']['value'],
+    downsample_per_class = lambda wildcards:config["references"][wildcards.reference]['downsample']['stratified'],
+    feature_selection_method = "complete",
+    pipeline_mode = "pretrain"
+  shell:
+    """
+    Rscript {params.basedir}/Scripts/preprocess.R \
+    {input.reference} \
+    "" \
+    {params.out} \
+    {params.convert_genes} \
+    {params.labfile} \
+    {params.reference_name} \
+    "" \
+    {params.min_cells_per_cluster} \
+    {params.downsample_value} \
+    {params.downsample_per_class} \
+    "{params.batch_path}" \
+    "{params.feature_selection_method}" \
+    "{params.pipeline_mode}" \
+    &> {log} 
+    """
+
+#----------------------------------------------------
+#   SingleR 
+#----------------------------------------------------
+
+rule train_SingleR:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/SingleR/SingleR_model.Rda",
+    pretrained_file = config['output_dir'] + '/model/{reference}/SingleR/SingleR_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir}
+  log: 
+    config['output_dir'] + "/model/{reference}/SingleR/SingleR.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/SingleR/SingleR_train_benchmark.txt"
+  threads: 
+    config['SingleR']['threads']
+  resources: 
+  shell:
+    """
+    Rscript {params.basedir}/Scripts/SingleR/train_SingleR.R \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   scPred 
+#----------------------------------------------------
+
+rule train_scPred:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/scPred_{classifier}/scPred_{classifier}.Rda",
+    pretrained_file = config['output_dir'] + '/model/{reference}/scPred_{classifier}/scPred_{classifier}_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir},
+    classifier = "{classifier}"
+  log: 
+    config['output_dir'] + "/model/{reference}/scPred_{classifier}/scPred_{classifier}.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/scPred_{classifier}/scPred_{classifier}_train_benchmark.txt"
+  threads: 
+    config['scPred']['threads']
+  resources: 
+  shell:
+    """
+    Rscript {params.basedir}/Scripts/scPred/train_scPred.R \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    {params.classifier} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+rule gather_scPred:
+  input:
+    expand(
+        config['output_dir'] + "/model/{{reference}}/scPred_{classifier}/scPred_{classifier}_successfully_trained.txt",
+        classifier = config['scPred']['classifier']
+      ) 
+#----------------------------------------------------
+#   scClassify
+#----------------------------------------------------
+
+rule train_scClassify:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/scClassify/scClassify_model.Rda",
+    pretrained_file = config['output_dir'] + '/model/{reference}/scClassify/scClassify_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir},
+    topN = config['scClassify']['topN'], 
+    weightsCal = config['scClassify']['weightsCal'],
+    hopach_kmax = config['scClassify']['hopach_kmax']
+  log:
+    config['output_dir'] + "/model/{reference}/scClassify/scClassify.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/scClassify/scClassify_train_benchmark.txt"
+  threads: 
+    config['scClassify']['threads']
+  resources:
+  shell:
+    """
+    Rscript {params.basedir}/Scripts/scClassify/train_scClassify.R \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    {params.topN} \
+    {params.weightsCal} \
+    {params.hopach_kmax} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+#----------------------------------------------------
+#   SciBet
+#----------------------------------------------------
+
+rule train_SciBet:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/SciBet/SciBet_model.Rda",
+    pretrained_file = config['output_dir'] + '/model/{reference}/SciBet/SciBet_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir},
+  log:
+    config['output_dir'] + "/model/{reference}/SciBet/SciBet.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/SciBet/SciBet_train_benchmark.txt"
+  threads: 
+    config['SciBet']['threads']
+  resources:
+  shell:
+    """
+    Rscript {params.basedir}/Scripts/SciBet/train_SciBet.R \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   scHPL
+#----------------------------------------------------
+
+rule train_scHPL:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/scHPL/scHPL_model.pkl",
+    pretrained_file = config['output_dir'] + '/model/{reference}/scHPL/scHPL_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir},
+    classifier = config['scHPL']['classifier'],
+    dimred = config['scHPL']['dimred']
+  log:
+    config['output_dir'] + "/model/{reference}/scHPL/scHPL.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/scHPL/scHPL_train_benchmark.txt"
+  threads: 
+    config['scHPL']['threads']
+  resources:
+  shell:
+    """
+    python {params.basedir}/Scripts/scHPL/train_scHPL.py \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {params.classifier} \
+    {params.dimred} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   SVM Linear
+#----------------------------------------------------
+
+rule train_SVMlinear:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/SVMlinear/SVMlinear_model.pkl",
+    pretrained_file = config['output_dir'] + '/model/{reference}/SVMlinear/SVMlinear_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir}
+  log:
+    config['output_dir'] + "/model/{reference}/SVMlinear/SVMlinear.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/SVMlinear/SVMlinear_train_benchmark.txt"
+  threads: 
+    config['SVMlinear']['threads']
+  resources:
+  shell:
+    """
+    python {params.basedir}/Scripts/SVC/train_linearSVM.py \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   SVC 
+#----------------------------------------------------
+
+rule train_SVC:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/SVC" + config['SVC']['classifier'] + "/SVC" + config['SVC']['classifier'] + "_model.pkl",
+    pretrained_file = config['output_dir'] + '/model/{reference}/SVC' + config['SVC']['classifier'] + '_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir},
+    classifier = config['SVC']['classifier']
+  log:
+    config['output_dir'] + "/model/{reference}/SVC" + config['SVC']['classifier'] + "/SVC" + config['SVC']['classifier'] + ".log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/SVC" + config['SVC']['classifier'] + "/SVC" + config['SVC']['classifier'] + "_train_benchmark.txt"
+  threads: 
+    config['SVC']['threads']
+  resources:
+  shell:
+    """
+    python {params.basedir}/Scripts/SVC/train_SVM.py \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {params.classifier} \
+    {threads} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   singleCellNet
+#----------------------------------------------------
+
+rule train_singleCellNet:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/singleCellNet/singleCellNet_model.Rda",
+    pretrained_file = config['output_dir'] + '/model/{reference}/singleCellNet/singleCellNet_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir},
+    nTrees = config['singleCellNet']['nTrees']
+  log:
+    config['output_dir'] + "/model/{reference}/singleCellNet/singleCellNet.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/singleCellNet/singleCellNet_train_benchmark.txt"
+  threads: 
+    config['singleCellNet']['threads']
+  resources:
+  shell:
+    """
+    Rscript {params.basedir}/Scripts/singleCellNet/train_singleCellNet.R \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    {params.nTrees} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   Correlation
+#----------------------------------------------------
+
+rule train_Correlation:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/Correlation/Correlation_model.Rda",
+    pretrained_file = config['output_dir'] + '/model/{reference}/Correlation/Correlation_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir}
+  log:
+    config['output_dir'] + "/model/{reference}/Correlation/Correlation.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/Correlation/Correlation_train_benchmark.txt"
+  threads: 
+    config['Correlation']['threads']
+  resources:
+  shell:
+    """
+    Rscript {params.basedir}/Scripts/Correlation/train_Correlation.R \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   scLearn 
+#----------------------------------------------------
+
+rule train_scLearn: 
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/scLearn/scLearn_model.Rda",
+    pretrained_file = config['output_dir'] + '/model/{reference}/scLearn/scLearn_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir},
+    bootstrap_times = config['scLearn']['bootstrap_times']
+  log:
+    config['output_dir'] + "/model/{reference}/scLearn/scLearn.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/scLearn/scLearn_train_benchmark.txt"
+  threads: 
+    config['scLearn']['threads']
+  resources:
+  shell:
+    """
+    Rscript {params.basedir}/Scripts/scLearn/train_scLearn.R \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    {params.bootstrap_times} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   ACTINN
+#----------------------------------------------------
+
+rule train_ACTINN:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/ACTINN/ACTINN_model.pkl",
+    pretrained_file = config['output_dir'] + '/model/{reference}/ACTINN/ACTINN_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir}
+  log:
+    config['output_dir'] + "/model/{reference}/ACTINN/ACTINN.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/ACTINN/ACTINN_predict_benchmark.txt"
+  threads: 
+    config['ACTINN']['threads']
+  shell:
+    """
+    python {params.basedir}/Scripts/ACTINN/train_ACTINN.py \
+           -trs {input.reference} \
+           -trl {input.labfile} \
+	         -mp {output.model} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   CellTypist 
+#----------------------------------------------------
+
+rule train_CellTypist:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/CellTypist/CellTypist_model.pkl",
+    pretrained_file = config['output_dir'] + '/model/{reference}/CellTypist/CellTypist_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir},
+    feature_selection = config['CellTypist']['feature_selection']
+  log:
+    config['output_dir'] + "/model/{reference}/CellTypist/CellTypist.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/CellTypist/CellTypist_train_benchmark.txt"
+  threads: 
+    config['CellTypist']['threads']
+  resources:
+  shell:
+    """
+    python {params.basedir}/Scripts/CellTypist/train_CellTypist.py \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    {params.feature_selection} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   Seurat
+#----------------------------------------------------
+
+rule train_Seurat:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/Seurat/Seurat_model.Rda",
+    pretrained_file = config['output_dir'] + '/model/{reference}/Seurat/Seurat_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir},
+    nPC_computed = config['Seurat']['nPC_computed'],
+    integration_method = config['Seurat']['integration_method']
+  log:
+    config['output_dir'] + "/model/{reference}/Seurat/Seurat.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/Seurat/Seurat_train_benchmark.txt"
+  threads: 
+    config['Seurat']['threads']
+  resources:
+  shell:
+    """
+    source /opt/conda/etc/profile.d/conda.sh && conda activate seurat5 && \
+    Rscript {params.basedir}/Scripts/Seurat/train_Seurat.R \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    {params.nPC_computed} \
+    {params.integration_method} \
+    &> {log} && \
+    conda deactivate
+    touch {output.pretrained_file}
+    """
+#----------------------------------------------------
+#   Symphony
+#----------------------------------------------------
+
+rule train_Symphony:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/Symphony/Symphony_model.Rda",
+    pretrained_file = config['output_dir'] + '/model/{reference}/Symphony/Symphony_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir},
+    nPC_computed = config['Symphony']['nPC_computed']
+  log:
+    config['output_dir'] + "/model/{reference}/Symphony/Symphony.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/Symphony/Symphony_train_benchmark.txt"
+  threads: 
+    config['Symphony']['threads']
+  resources:
+  shell:
+    """
+    Rscript {params.basedir}/Scripts/Symphony/train_Symphony.R \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    {params.nPC_computed} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+#----------------------------------------------------
+#   scPoli
+#----------------------------------------------------
+
+rule train_scPoli:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/scPoli/scPoli_model.pkl",
+    pretrained_file = config['output_dir'] + '/model/{reference}/scPoli/scPoli_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir}
+  log:
+    config['output_dir'] + "/model/{reference}/scPoli/scPoli.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/scPoli/scPoli_train_benchmark.txt"
+  shell:
+    """
+    python {params.basedir}/Scripts/scPoli/train_scPoli.py \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   scANVI
+#----------------------------------------------------
+
+rule train_scANVI:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/scANVI/model.pt",
+    pretrained_file = config['output_dir'] + '/model/{reference}/scANVI/scANVI_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir}
+  log:
+    config['output_dir'] + "/model/{reference}/scANVI/scANVI.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/scANVI/scANVI_train_benchmark.txt"
+  shell:
+    """
+    python {params.basedir}/Scripts/scANVI/train_scANVI.py \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   CellBlast
+#----------------------------------------------------
+
+rule train_CellBlast:
+  input:
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, "complete"),
+    labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+    model = config['output_dir'] + "/model/{reference}/CellBlast/models/ref.h5ad",
+    pretrained_file = config['output_dir'] + '/model/{reference}/CellBlast/CellBlast_successfully_trained.txt'
+  params:
+    basedir = {workflow.basedir},
+    n_models = config['CellBlast']['n_models']
+  log:
+    config['output_dir'] + "/model/{reference}/CellBlast/CellBlast.log"
+  benchmark:
+    config['output_dir'] + "/model/{reference}/CellBlast/CellBlast_train_benchmark.txt"
+  threads: 
+    config['CellBlast']['threads']
+  shell:
+    """
+    python {params.basedir}/Scripts/CellBlast/train_CellBlast.py \
+    {input.reference} \
+    {input.labfile} \
+    {output.model} \
+    {threads} \
+    {params.n_models} \
+    &> {log}
+    touch {output.pretrained_file}
+    """
+
+#----------------------------------------------------
+#   The End 
+#----------------------------------------------------

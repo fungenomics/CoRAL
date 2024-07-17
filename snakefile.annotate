@@ -21,6 +21,14 @@ dt_string = now.strftime("%Y-%m-%d_%H-%M-%S")
 # Get the names of query samples from the paths given in the query section of the config
 samples = list(config['query_datasets'].keys())
 
+# set default parameters
+func.set_reference_batch_parameters(config)
+func.set_downsampling_parameters(config)
+func.set_ontology_parameters(config, mode = 'annotation')
+func.set_gene_conversion_parameters(config)
+func.set_benchmark_directory(config, mode = 'annotation')
+print(config)
+
 # get consensus methods to run 
 consensus_run = func.get_consensus_methods(config)
 
@@ -29,13 +37,9 @@ tools_to_run = func.get_tools_to_run(config)
 consensus_tools = func.get_consensus_tools(config)
 print(consensus_tools)
 
-# set defult parameters
-func.set_reference_batch_parameters(config)
-func.set_downsampling_parameters(config)
-func.set_ontology_parameters(config, mode = 'annotation')
-func.set_gene_conversion_parameters(config)
-func.set_benchmark_directory(config, mode = 'annotation')
-print(config)
+# get feature selection method
+feature_selection_method = func.get_feature_selection_method(config)
+print(feature_selection_method)
 
 #----------------------------------------------------
 #  Final rule all 
@@ -57,8 +61,8 @@ rule preprocess:
     reference = lambda wildcards:config['references'][wildcards.reference]['expression'],
     query = config['query_datasets'].values()
   output:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
-    query = expand(config['output_dir'] + "/{sample}/{{reference}}/expression.csv", sample = samples),
+    reference = expand(config['output_dir'] + "/model/{{reference}}/expression_{feat_select}.csv",feat_select = feature_selection_method),
+    query = expand(config['output_dir'] + "/{sample}/{{reference}}/expression_{feat_select}.csv", sample = samples,feat_select = feature_selection_method),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   log: 
     config['output_dir'] + "/model/{reference}/preprocess.log"
@@ -73,6 +77,8 @@ rule preprocess:
     min_cells_per_cluster = lambda wildcards:config["references"][wildcards.reference]['min_cells_per_cluster'],
     downsample_value = lambda wildcards:config["references"][wildcards.reference]['downsample']['value'],
     downsample_per_class = lambda wildcards:config["references"][wildcards.reference]['downsample']['stratified'],
+    feature_selection_method = feature_selection_method,
+    pipeline_mode = "annotation"
   shell:
     """
     Rscript {params.basedir}/Scripts/preprocess.R \
@@ -87,6 +93,8 @@ rule preprocess:
     {params.downsample_value} \
     {params.downsample_per_class} \
     "{params.batch_path}" \
+    "{params.feature_selection_method}" \
+    "{params.pipeline_mode}" \
     &> {log} 
     """
 
@@ -119,6 +127,34 @@ rule ontology:
       &> {log}
      """
 
+#----------------------------------------------------
+#  Ontology 
+#----------------------------------------------------
+
+rule ontology:
+  input:
+     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
+  output:
+     ontology = config['output_dir'] + "/model/{reference}/ontology/ontology.csv"
+  log:
+     config['output_dir'] + "/model/{reference}/ontology.log"
+  params:
+     basedir = {workflow.basedir},
+     out = config['output_dir'],
+     reference_name = "{reference}",
+     ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"],
+     ontology_column = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"]
+  shell:
+     """
+      Rscript {params.basedir}/Scripts/ontology.R \
+       {params.out} \
+       {params.reference_name} \
+       {input.labfile} \
+       "{params.ontology_path}" \
+       "{params.ontology_column}" \
+      &> {log}
+     """
+     
 #----------------------------------------------------
 #  Consensus
 #----------------------------------------------------
@@ -219,7 +255,7 @@ rule knit_report:
 
 rule train_SingleR:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["SingleR"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/SingleR/SingleR_model.Rda"
@@ -244,7 +280,7 @@ rule train_SingleR:
 
 rule predict_SingleR:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["SingleR"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/SingleR/SingleR_model.Rda"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/SingleR/SingleR_pred.csv"
@@ -273,7 +309,7 @@ rule predict_SingleR:
 
 rule train_scPred:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["scPred"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/scPred_{classifier}/scPred_{classifier}.Rda"
@@ -300,7 +336,7 @@ rule train_scPred:
 
 rule predict_scPred:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["scPred"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/scPred_{classifier}/scPred_{classifier}.Rda"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/scPred_{classifier}/scPred_{classifier}_pred.csv"
@@ -336,7 +372,7 @@ rule gather_scPred:
 
 rule train_scClassify:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["scClassify"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/scClassify/scClassify_model.Rda"
@@ -367,7 +403,7 @@ rule train_scClassify:
 
 rule predict_scClassify:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["scClassify"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/scClassify/scClassify_model.Rda"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/scClassify/scClassify_pred.csv"
@@ -406,7 +442,7 @@ rule predict_scClassify:
 
 rule train_SciBet:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["SciBet"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/SciBet/SciBet_model.Rda"
@@ -431,7 +467,7 @@ rule train_SciBet:
 
 rule predict_SciBet:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["SciBet"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/SciBet/SciBet_model.Rda"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/SciBet/SciBet_pred.csv"
@@ -460,7 +496,7 @@ rule predict_SciBet:
 
 rule train_scHPL:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["scHPL"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/scHPL/scHPL_model.pkl"
@@ -488,7 +524,7 @@ rule train_scHPL:
 
 rule predict_scHPL:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["scHPL"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/scHPL/scHPL_model.pkl"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/scHPL/scHPL_pred.csv"
@@ -518,7 +554,7 @@ rule predict_scHPL:
 
 rule train_SVMlinear:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["SVMlinear"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/SVMlinear/SVMlinear_model.pkl"
@@ -543,7 +579,7 @@ rule train_SVMlinear:
 
 rule predict_SVMlinear:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["SVMlinear"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/SVMlinear/SVMlinear_model.pkl"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/SVMlinear/SVMlinear_pred.csv"
@@ -576,7 +612,7 @@ rule predict_SVMlinear:
 
 rule train_SVC:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["SVC"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/SVC" + config['SVC']['classifier'] + "/SVC" + config['SVC']['classifier'] + "_model.pkl"
@@ -603,7 +639,7 @@ rule train_SVC:
 
 rule predict_SVC:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["SVC"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/SVC" + config['SVC']['classifier'] + "/SVC" + config['SVC']['classifier'] + "_model.pkl"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/SVC" + config['SVC']['classifier'] + "/SVC" + config['SVC']['classifier'] + "_pred.csv"
@@ -636,7 +672,7 @@ rule predict_SVC:
 
 rule train_singleCellNet:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["singleCellNet"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/singleCellNet/singleCellNet_model.Rda"
@@ -663,7 +699,7 @@ rule train_singleCellNet:
 
 rule predict_singleCellNet:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["singleCellNet"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/singleCellNet/singleCellNet_model.Rda"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/singleCellNet/singleCellNet_pred.csv"
@@ -692,7 +728,7 @@ rule predict_singleCellNet:
 
 rule train_Correlation:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["Correlation"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/Correlation/Correlation_model.Rda"
@@ -717,7 +753,7 @@ rule train_Correlation:
 
 rule predict_Correlation:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["Correlation"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/Correlation/Correlation_model.Rda"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/Correlation/Correlation_pred.csv"
@@ -746,7 +782,7 @@ rule predict_Correlation:
 
 rule train_scLearn: 
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["scLearn"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/scLearn/scLearn_model.Rda"
@@ -773,7 +809,7 @@ rule train_scLearn:
 
 rule predict_scLearn:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["scLearn"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/scLearn/scLearn_model.Rda"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/scLearn/scLearn_pred.csv"
@@ -802,7 +838,7 @@ rule predict_scLearn:
 
 rule train_ACTINN:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["ACTINN"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/ACTINN/ACTINN_model.pkl"
@@ -825,7 +861,7 @@ rule train_ACTINN:
 
 rule predict_ACTINN:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["ACTINN"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/ACTINN/ACTINN_model.pkl"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/ACTINN/ACTINN_pred.csv"
@@ -853,9 +889,9 @@ rule predict_ACTINN:
 
 rule run_scID:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["scID"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv",
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv"
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["scID"]["gene_selection"])
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/scID/scID_pred.csv"
   params:
@@ -887,9 +923,9 @@ rule run_scID:
 
 rule run_scAnnotate:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["scAnnotate"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv",
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv"
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["scAnnotate"]["gene_selection"])
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/scAnnotate/scAnnotate_pred.csv"
   params:
@@ -919,9 +955,9 @@ rule run_scAnnotate:
 
 rule run_scNym:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["scNym"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv",
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv"
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["scNym"]["gene_selection"])
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/scNym/scNym_pred.csv"
   params:
@@ -950,7 +986,7 @@ rule run_scNym:
 
 rule train_CellTypist:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["CellTypist"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/CellTypist/CellTypist_model.pkl"
@@ -977,7 +1013,7 @@ rule train_CellTypist:
 
 rule predict_CellTypist:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["CellTypist"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/CellTypist/CellTypist_model.pkl"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/CellTypist/CellTypist_pred.csv"
@@ -1011,7 +1047,7 @@ rule predict_CellTypist:
 
 rule train_Seurat:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["Seurat"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/Seurat/Seurat_model.Rda"
@@ -1042,7 +1078,7 @@ rule train_Seurat:
 
 rule predict_Seurat:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["Seurat"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/Seurat/Seurat_model.Rda"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/Seurat/Seurat_pred.csv"
@@ -1076,7 +1112,7 @@ rule predict_Seurat:
 
 rule train_Symphony:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["Symphony"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/Symphony/Symphony_model.Rda"
@@ -1103,7 +1139,7 @@ rule train_Symphony:
 
 rule predict_Symphony:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["Symphony"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/Symphony/Symphony_model.Rda"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/Symphony/Symphony_pred.csv"
@@ -1132,7 +1168,7 @@ rule predict_Symphony:
 
 rule train_scPoli:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["scPoli"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/scPoli/scPoli_model.pkl"
@@ -1153,7 +1189,7 @@ rule train_scPoli:
 
 rule predict_scPoli:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["scPoli"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/scPoli/scPoli_model.pkl"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/scPoli/scPoli_pred.csv"
@@ -1178,7 +1214,7 @@ rule predict_scPoli:
 
 rule train_scANVI:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["scANVI"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/scANVI/model.pt"
@@ -1199,7 +1235,7 @@ rule train_scANVI:
 
 rule predict_scANVI:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["scANVI"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/scANVI/model.pt"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/scANVI/scANVI_pred.csv"
@@ -1226,7 +1262,7 @@ rule predict_scANVI:
 
 rule train_CellBlast:
   input:
-    reference = config['output_dir'] + "/model/{reference}/expression.csv",
+    reference = lambda wildcards: config['output_dir'] + '/model/{}/expression_{}.csv'.format(wildcards.reference, config["CellBlast"]["gene_selection"]),
     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
   output:
     model = config['output_dir'] + "/model/{reference}/CellBlast/models/ref.h5ad"
@@ -1252,7 +1288,7 @@ rule train_CellBlast:
 
 rule predict_CellBlast:
   input:
-    query = config['output_dir'] + "/{sample}/{reference}/expression.csv",
+    query = lambda wildcards: config['output_dir'] + '/{}/{}/expression_{}.csv'.format(wildcards.sample,wildcards.reference, config["CellBlast"]["gene_selection"]),
     model = config['output_dir'] + "/model/{reference}/CellBlast/models/ref.h5ad"
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/CellBlast/CellBlast_pred.csv"

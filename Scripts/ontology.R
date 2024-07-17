@@ -1,4 +1,3 @@
-
 library(tidyverse)
 
 set.seed(1234)
@@ -25,7 +24,7 @@ if(length(ontology_columns) == 1 & ontology_columns[1] == 'label'){
   
   lab = data.table::fread(lab_path, header = T)
   print(lab)
-
+  
   ont = data.frame(label = unique(lab$label))
   print(ont)
 
@@ -35,7 +34,6 @@ if(length(ontology_columns) == 1 & ontology_columns[1] == 'label'){
 }else{
   ont = data.table::fread(ontology_path) 
   print(ont)
-
   data.table::fwrite(ont,
                      file = paste0(out, '/model/', reference_name, '/ontology/ontology.csv'),
                      sep = ',')
