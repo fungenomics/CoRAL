@@ -98,35 +98,6 @@ rule preprocess:
     &> {log} 
     """
 
-
-#----------------------------------------------------
-#  Ontology 
-#----------------------------------------------------
-
-rule ontology:
-  input:
-     labfile = config['output_dir'] + "/model/{reference}/downsampled_labels.csv"
-  output:
-     ontology = config['output_dir'] + "/model/{reference}/ontology/ontology.csv"
-  log:
-     config['output_dir'] + "/model/{reference}/ontology.log"
-  params:
-     basedir = {workflow.basedir},
-     out = config['output_dir'],
-     reference_name = "{reference}",
-     ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"],
-     ontology_column = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"]
-  shell:
-     """
-      Rscript {params.basedir}/Scripts/ontology.R \
-       {params.out} \
-       {params.reference_name} \
-       {input.labfile} \
-       "{params.ontology_path}" \
-       "{params.ontology_column}" \
-      &> {log}
-     """
-
 #----------------------------------------------------
 #  Ontology 
 #----------------------------------------------------
