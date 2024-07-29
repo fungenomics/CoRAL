@@ -20,10 +20,13 @@ print(ontology_columns)
 
 dir.create(paste0(out, '/model/', reference_name, '/ontology/'), recursive = T)
 
+lab = data.table::fread(lab_path,
+                        sep = ",",
+                        header = T) %>% as.data.frame()
+
+print(lab)
+
 if(length(ontology_columns) == 1 & ontology_columns[1] == 'label'){
-  
-  lab = data.table::fread(lab_path, header = T)
-  print(lab)
   
   ont = data.frame(label = unique(lab$label))
   print(ont)
@@ -32,7 +35,12 @@ if(length(ontology_columns) == 1 & ontology_columns[1] == 'label'){
                      file = paste0(out, '/model/', reference_name, '/ontology/ontology.csv'),
                      sep = ',')
 }else{
-  ont = data.table::fread(ontology_path) 
+  ont = data.table::fread(ontology_path,
+                          sep = ",",
+                          header = T) %>% as.data.frame() 
+  
+  #Filter from the ontology the labels that were removed from the reference in the preprocess 
+  ont <- ont[ont$label %in% lab$label,,drop=F]
   print(ont)
   data.table::fwrite(ont,
                      file = paste0(out, '/model/', reference_name, '/ontology/ontology.csv'),

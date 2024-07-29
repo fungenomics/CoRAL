@@ -99,80 +99,80 @@ print('@ DONE')
 # Plot the tree
 # I'm using this method since they provided it here:
 # https://github.com/lcmmichielsen/scHPL/issues/5
-def _print_node(node, hor, ver_steps, fig, new_nodes):
-    global ver
-    # Add horizontal line
-    x, y = ([np.max([0.05, hor-0.045]), hor], [ver, ver])
-    line = mlines.Line2D(x,y, lw=1)
-    fig.add_artist(line)
-    
-    # Add textbox
-    if np.isin(node.name[0], new_nodes):
-        txt = r"$\bf{" + node.name[0] + "}$"
-    else:
-        txt = node.name[0]
-    
-    for n in node.name:
-        if(n != node.name[0]):
-            if np.isin(n, new_nodes):
-                txt = txt + ' & ' + r"$\bf{" + n + "}$"
-            else:
-                txt = txt + ' & ' + n
-                
-    fig.text(hor,ver, txt, size=10,
-             ha = 'left', va='center',
-             bbox = dict(boxstyle='round', fc='w', ec='k'))
-    
-    # Continue with child nodes
-    hor = hor+0.05
-    ver_line_start = ver
-    ver_line_end = ver
-    
-    for i in node.descendants:
-        ver = ver-ver_steps
-        ver_line_end = ver
-        _print_node(i, hor, ver_steps, fig, new_nodes)
-        
-    # Add vertical line
-    x, y = ([np.max([0.05, hor-0.045]), np.max([0.05, hor-0.045])], 
-            [ver_line_start, ver_line_end])
-    line = mlines.Line2D(x,y, lw=1)
-    fig.add_artist(line)
-    
-def print_tree(filepath,
-               tree: TreeNode, 
-               new_nodes: list = []):
-    '''Print the tree
-        Parameters
-        ----------
-        tree : TreeNode
-            Tree to print
-        new_nodes : List = []
-            Nodes recently added to the tree, these are printed in bold
-    
-        Returns
-        -------
-        None.
-    '''
-    
-    global ver
-    ver = 0.93
-    
-    count = _count_nodes(tree)
-    ver_steps = 0.9/count
-    plot_height = count*0.3
-    fig = plt.figure(figsize=(6,plot_height)) # This size is hard coded
-    ax = plt.subplot(111)
-
-    _print_node(tree[0], hor=0.05, ver_steps=ver_steps, fig=fig, 
-                new_nodes = new_nodes)
-    
-    plt.axis('off')
-    plt.savefig(filepath, dpi=1000)
-    plt.close()
-    
-print('@ PLOTTING')
-filepath = out_other_path + '/tree.png'
-print_tree(filepath=filepath,
-           tree = tree)
-print('@ DONE')
+# def _print_node(node, hor, ver_steps, fig, new_nodes):
+#     global ver
+#     # Add horizontal line
+#     x, y = ([np.max([0.05, hor-0.045]), hor], [ver, ver])
+#     line = mlines.Line2D(x,y, lw=1)
+#     fig.add_artist(line)
+#     
+#     # Add textbox
+#     if np.isin(node.name[0], new_nodes):
+#         txt = r"$\bf{" + node.name[0] + "}$"
+#     else:
+#         txt = node.name[0]
+#     
+#     for n in node.name:
+#         if(n != node.name[0]):
+#             if np.isin(n, new_nodes):
+#                 txt = txt + ' & ' + r"$\bf{" + n + "}$"
+#             else:
+#                 txt = txt + ' & ' + n
+#                 
+#     fig.text(hor,ver, txt, size=10,
+#              ha = 'left', va='center',
+#              bbox = dict(boxstyle='round', fc='w', ec='k'))
+#     
+#     # Continue with child nodes
+#     hor = hor+0.05
+#     ver_line_start = ver
+#     ver_line_end = ver
+#     
+#     for i in node.descendants:
+#         ver = ver-ver_steps
+#         ver_line_end = ver
+#         _print_node(i, hor, ver_steps, fig, new_nodes)
+#         
+#     # Add vertical line
+#     x, y = ([np.max([0.05, hor-0.045]), np.max([0.05, hor-0.045])], 
+#             [ver_line_start, ver_line_end])
+#     line = mlines.Line2D(x,y, lw=1)
+#     fig.add_artist(line)
+#     
+# def print_tree(filepath,
+#                tree: TreeNode, 
+#                new_nodes: list = []):
+#     '''Print the tree
+#         Parameters
+#         ----------
+#         tree : TreeNode
+#             Tree to print
+#         new_nodes : List = []
+#             Nodes recently added to the tree, these are printed in bold
+#     
+#         Returns
+#         -------
+#         None.
+#     '''
+#     
+#     global ver
+#     ver = 0.93
+#     
+#     count = _count_nodes(tree)
+#     ver_steps = 0.9/count
+#     plot_height = count*0.3
+#     fig = plt.figure(figsize=(6,plot_height)) # This size is hard coded
+#     ax = plt.subplot(111)
+# 
+#     _print_node(tree[0], hor=0.05, ver_steps=ver_steps, fig=fig, 
+#                 new_nodes = new_nodes)
+#     
+#     plt.axis('off')
+#     plt.savefig(filepath, dpi=1000)
+#     plt.close()
+#     
+# print('@ PLOTTING')
+# filepath = out_other_path + '/tree.png'
+# print_tree(filepath=filepath,
+#            tree = tree)
+# print('@ DONE')
