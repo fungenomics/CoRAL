@@ -43,16 +43,27 @@ func.set_reference_pretrained_parameter(config,tools_to_run)
 feature_selection_method = func.get_feature_selection_method(config,tools_to_run)
 print(feature_selection_method)
 print(config)
+
 #----------------------------------------------------
 #  Final rule all 
 #----------------------------------------------------
 
-rule all:
+#rule all:
+#  input:
+#    config['output_dir'] + "/annotate.finished.succesfully.txt"
+
+rule annotate_all:
   input:
     expand(config['output_dir'] + '/{sample}/report/{sample}.{consensus_type}.prediction_report.{reference}.' + dt_string + '.html',
     reference = config['references'],
     sample = samples,
     consensus_type = consensus_run)
+  output:
+    finish_file = config['output_dir'] + "/annotate.finished.succesfully.txt"
+  shell:
+    """
+    touch {output.finish_file}
+    """
 
 #----------------------------------------------------
 #  Preprocess

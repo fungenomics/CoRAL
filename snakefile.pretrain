@@ -36,12 +36,18 @@ tools_to_run = func.get_tools_to_run(config,mode = "pretrain")
 #  Final rule all 
 #----------------------------------------------------
 
-rule all:
+rule pretrain_all:
   input:
     expand(config['output_dir'] + '/model/{reference}/{tool}/{tool}_successfully_trained.txt',
       reference=config['references'],
       tool=tools_to_run
     )
+  output:
+    finish_file = config['output_dir'] + "/pretrain.finished.succesfully.txt"
+  shell:
+    """
+    touch {output.finish_file}
+    """
 
 #----------------------------------------------------
 #  Preprocess

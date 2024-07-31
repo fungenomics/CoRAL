@@ -47,9 +47,31 @@ def all_function():
         for ontology in config["references"][reference]["ontology"]["ontology_column"]
     ]
     
-rule all:
+def output_all_function():
+    return [
+        f"{output_dir_benchmark}/{reference}/benchmark.finished.succesfully.txt"
+        for reference in config['references'].keys()
+        for output_dir_benchmark in [config["references"][reference]["output_dir_benchmark"]]
+    ]
+    
+rule benchmark_all:
   input: 
       all_function()
+  output:
+    finish_file = output_all_function()
+  shell:
+    """
+    # Your string
+    input_string="{output.finish_file}"
+
+    # Convert the string into an array of files
+    IFS=' ' read -r -a file_output <<< "$input_string"
+
+    # touch a finish file for each path
+    for file in "${{file_output[@]}}"; do
+      touch "$file"
+    done
+    """
 
 #----------------------------------------------------
 #  Subset Folds 
