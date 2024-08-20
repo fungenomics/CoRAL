@@ -2,8 +2,6 @@
 library(rBayesianOptimization)
 library(tidyverse)
 
-set.seed(1234)
-
 initial.options = commandArgs(trailingOnly = FALSE)
 file.arg.name = "--file="
 script.name = sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)]) 
@@ -11,6 +9,10 @@ script.name = sub(file.arg.name, "", initial.options[grep(file.arg.name, initial
 source(paste0(dirname(dirname(script.name)), "/Functions/functions.R"))
 
 args = commandArgs(trailingOnly = TRUE)
+
+print(paste0("@ Using seed ",as.character(args[12])))
+set.seed(as.numeric(args[12]))
+
 ref_path = args[1]
 lab_path = args[2]
 out_path = args[3]

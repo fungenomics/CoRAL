@@ -2,6 +2,7 @@
 #--- PREPROCESS ------
 
 output_dir_benchmark: ""
+seed: 1234
 
 #--- CONSENSUS -------
 consensus:

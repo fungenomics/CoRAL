@@ -97,7 +97,8 @@ rule subset_folds:
     downsample_value = lambda wildcards:config["references"][wildcards.reference]['downsample']['value'],
     downsample_stratified = lambda wildcards:config["references"][wildcards.reference]['downsample']['stratified'],
     ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"],
-    ontology_column = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"]
+    ontology_column = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"],
+    random_seed = config['seed']
   threads: 1
   resources:
   shell:
@@ -114,6 +115,7 @@ rule subset_folds:
     "{params.ontology_path}" \
     "{params.ontology_column}" \
     {params.batch_path} \
+    "{params.random_seed}" \
     &> {log}
     """
 

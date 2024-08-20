@@ -7,9 +7,11 @@ script.name = sub(file.arg.name, "", initial.options[grep(file.arg.name, initial
 
 source(paste0(dirname(script.name), "/Functions/functions.R"))
 
-set.seed(1234)
-
 args = commandArgs(trailingOnly = TRUE)
+
+print(paste0("@ Using seed ",as.character(args[14])))
+set.seed(as.numeric(args[14]))
+
 ref_path = args[1]
 query_paths = strsplit(args[2], split = ' ')[[1]]
 out = args[3]

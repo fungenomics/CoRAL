@@ -72,7 +72,8 @@ rule preprocess:
     downsample_value = lambda wildcards:config["references"][wildcards.reference]['downsample']['value'],
     downsample_per_class = lambda wildcards:config["references"][wildcards.reference]['downsample']['stratified'],
     feature_selection_method = "complete",
-    pipeline_mode = "pretrain"
+    pipeline_mode = "pretrain",
+    random_seed = config['seed']
   shell:
     """
     Rscript {params.basedir}/Scripts/preprocess.R \
@@ -89,6 +90,7 @@ rule preprocess:
     "{params.batch_path}" \
     "{params.feature_selection_method}" \
     "{params.pipeline_mode}" \
+    "{params.random_seed}" \
     &> {log} 
     """
 
