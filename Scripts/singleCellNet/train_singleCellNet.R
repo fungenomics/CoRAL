@@ -35,29 +35,28 @@ if(!order){
 
 # make Seurat object (transpose ref first)
 ref = transposeBigData(ref, blocksize = 10000)
-seurat = CreateSeuratObject(counts = ref, meta.data = labels)
+# seurat = CreateSeuratObject(counts = ref, meta.data = labels)
 
 #------------- Train singleCellNet -------------
 
 # Split reference data for training and assessment
-# Default ncells = 50, Hussein had used ncells = 80 in scCoAnnotate V1
-stList = splitCommon(sampTab = seurat@meta.data, ncells = 50, dLevel = "label")
-# Get the downsampled list
-stTrain = stList[[1]]
-# Get corresponding 
-expTrain = as.matrix(GetAssayData(seurat))[,row.names(stTrain)]
+# Default ncells = 50
+# stList = splitCommon(sampTab = seurat@meta.data, ncells = 50, dLevel = "label")
+# # Get the downsampled list
+# stTrain = stList[[1]]
+# # Get corresponding 
+# expTrain = as.matrix(GetAssayData(seurat))[,row.names(stTrain)]
 
 # Train singleCellNet
-# Default uses nTopGenes = 10, nTrees = 1000
-# Hussein had used nTopGenes = 12, nTrees = 350 in scCoAnnotate V1 and nTrees = 500 in his thesis
+# Default uses nTopGenes = 10, nTrees = 1000, nRand = 70
 message('@ TRAINING MODEL')
-class_info = scn_train(stTrain = stTrain, 
-                        expTrain = expTrain, 
-                        nTopGenes = 10, 
-                        nRand = 70, 
-                        nTrees = nTrees, 
-                        nTopGenePairs = 25, 
-                        dLevel = "label")
+class_info = scn_train(stTrain = labels, 
+                       expTrain = as.matrix(ref), 
+                       nTopGenes = 10, 
+                       nRand = 70, 
+                       nTrees = nTrees, 
+                       nTopGenePairs = 25, 
+                       dLevel = "label")
 message('@ DONE')
 
 # save trained model 
@@ -66,7 +65,3 @@ save(class_info, file = out_path)
 message('@ DONE')
 
 #----------------------------------------
-
-
-
-

@@ -307,36 +307,79 @@ calculate_percentage_unresolved = function(pred, order, cons_tools){
 }
 
 
-get_pred = function(pred, tool, true){
-  pred %>%
-     select(tool) %>%
-     mutate(label = .data[[tool]],
-            label = ifelse(!label %in% true$label, NA, label),
-            label = factor(label, ordered = TRUE)) %>%
-  return()
-}
+# get_pred = function(pred, tool, true){
+#   pred %>%
+#      select(tool) %>%
+#      mutate(label = .data[[tool]],
+#             label = ifelse(!label %in% true$label, NA, label),
+#             label = factor(label, ordered = TRUE)) %>%
+#   return()
+# }
 
-# gets stat for each fold and returns data frame 
-get_stat = function(x, stat){
-  x$byClass %>% 
-  as.data.frame() %>%
-  rownames_to_column('class') %>%
-  separate(class, into = c(NA, 'class'), sep = ': ') %>%
-  select(class, .data[[stat]]) %>%
-  mutate(fold = x$fold,
-         tool = x$tool)
-}
+# # gets stat for each fold and returns data frame 
+# get_stat = function(x, stat){
+#   x$byClass %>% 
+#   as.data.frame() %>%
+#   rownames_to_column('class') %>%
+#   separate(class, into = c(NA, 'class'), sep = ': ') %>%
+#   select(class, .data[[stat]]) %>%
+#   mutate(fold = x$fold,
+#          tool = x$tool)
+# }
 
 # gets all stats for each fold and returns data frame 
-get_all_stats = function(x){
-  x$byClass %>% 
-  as.data.frame() %>%
-  rownames_to_column('class') %>%
-  separate(class, into = c(NA, 'class'), sep = ': ') %>%
-  mutate(fold = x$fold,
-         tool = x$tool)
-}
+# get_all_stats = function(x){
+#   x$byClass %>% 
+#   as.data.frame() %>%
+#   rownames_to_column('class') %>%
+#   separate(class, into = c(NA, 'class'), sep = ': ') %>%
+#   mutate(fold = x$fold,
+#          tool = x$tool)
+# }
 
+# calculate the Precision, Recall and F1 in the benchmarking notebook
+get_metrics <- function(data){
+  metrics.df <- data %>% 
+    group_by(prediction) %>% 
+    #total of predicted to being that class (TP + FP)
+    mutate(Sum_N = n()) %>% 
+    ungroup() %>% 
+    group_by(class) %>% 
+    #total of true class (TP + FN)
+    mutate(Sum_M=n()) %>% 
+    ungroup() %>%
+    group_by(class,prediction) %>%
+    summarise(TP = sum(class == prediction),
+              # FP = sum(true != prediction),
+              Sum_N = unique(Sum_N),
+              Sum_M = unique(Sum_M)
+    ) %>% 
+    ungroup() %>%
+    filter(class == prediction) %>%  
+    group_by(class) %>%
+    mutate(Prec_P = TP/Sum_N,
+           Rec_P  = TP/Sum_M) %>% 
+    ungroup() %>% 
+    group_by(class) %>% 
+    summarise(F1 = (2*Rec_P*Prec_P)/(Prec_P+Rec_P),
+              Recall = Rec_P,
+              Precision = Prec_P) %>% 
+    as.data.frame()
+  ## Complete the missing assignation with NA
+  ## This could be a category that was never assigned so its value is zero 
+  ## First check the missing
+  missing.cat <-setdiff(unique(data$class),metrics.df$class)
+  if(length(missing.cat) > 0){
+    metrics.df <- rbind(metrics.df,
+                        data.frame(class = missing.cat,
+                                   F1 = 0,
+                                   Recall = 0,
+                                   Precision = 0
+                         )
+                      )
+  }
+  return(metrics.df)
+}
 #----- PLOTS FOR NOTEBOOK ANNOTATION ------------------------------------
 
 plot_tool_correlation_heatmap = function(seurat, tools){
@@ -526,8 +569,8 @@ plot_stat = function(cm_byclass, stat){
 
 p = cm_byclass %>% 
   as.data.frame() %>%
-  rownames_to_column('class') %>%
-  separate(class, into = c(NA, 'class'), sep = ': ') %>%
+  # rownames_to_column('class') %>%
+  # separate(class, into = c(NA, 'class'), sep = ': ') %>%
   ggplot(aes(reorder(class, -.data[[stat]]), .data[[stat]])) +
   geom_bar(stat = 'identity', col = 'white', fill = 'lightgrey') +
   theme_bw() +
@@ -551,10 +594,9 @@ return(p)
 # plot metric accross folds for each class as a boxplot  
 plot_stat_boxplot = function(list, tool, stat){
   
-df = lapply(list[[tool]], get_stat, stat = stat) %>% bind_rows()
-
+df = list[[tool]] %>% bind_rows() %>% as.data.frame()
 df[is.na(df)] = 0
-
+df$stat <- df[,stat]
 df %>%
   ggplot(aes(reorder(class, -.data[[stat]], mean), .data[[stat]])) +
   geom_boxplot() +
@@ -578,9 +620,9 @@ df %>%
 # plot average stat for all tools 
 plot_mean_tool = function(list, stat, tools, train_lab){
 
-df = lapply(list, function(x){lapply(x, get_stat, stat = stat) %>% bind_rows()})
+# df = lapply(list, function(x){lapply(x, get_stat, stat = stat) %>% bind_rows()})
 
-df = bind_rows(df) %>% 
+df = bind_rows(list) %>% 
   group_by(class, tool) %>%
   mutate(mean = mean(.data[[stat]])) %>%
   distinct(class, tool, mean) %>% 

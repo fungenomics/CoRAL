@@ -12,7 +12,7 @@ sample_path = args[1]
 model_path = args[2]
 pred_path = args[3]
 threads = as.numeric(args[4])
-
+threshold = as.numeric(args[5])
 # get path for other output
 out_path = dirname(pred_path)
 
@@ -25,7 +25,7 @@ query = data.table::fread(sample_path, nThread=threads, header=T, data.table=F) 
 message('@ DONE')
 
 # Get cell names
-cellnames = row.names(query)
+#cellnames = row.names(query)
 
 # load model 
 message('@ LOAD MODEL')
@@ -40,23 +40,45 @@ query = transposeBigData(query, blocksize = 10000)
 # predict labels 
 message('@ PREDICT LABELS')
 
-# Default nrand = 50, Hussein had used nrand = 0
+# No generating random cells
 pred = scn_predict(class_info[['cnProc']], query, nrand = 0)
 message('@ DONE')
 
-# classify cells 
-query_res = assign_cate(classRes = pred, sampTab = data.frame(row.names = cellnames), cThresh = 0.5) 
+# classify cells , I do the same as what they do in get_cate, 
+# assign the cell to the cell-type with the highest score
+# if the score is lower than certain threshold, assign it as Unknown (rand)
+df <- t(pred) %>% 
+  apply(1,function(x){
+    data.frame(label = names(x)[which.max(x)],
+               score = max(x))
+    }) %>% 
+  do.call(what = "rbind",.) %>% 
+  mutate(label = ifelse(label == "rand","Unknown",label)) #Convert rand to Unknown
+#It is assisgned rand when the category with the max score is rand, then the rand is convert to Unknown
+# finally for those assignation when the max value is lower than a certain threshold (0.5 by default)
+# the label is also converted to Unknown
+df$label[df$score < threshold] <- "Unknown" 
 
-pred_labs = data.frame(cell = rownames(query_res),
-	               singleCellNet = query_res$category)
-
+pred_labs = data.frame(cell = rownames(df),
+	                     singleCellNet = df$label)
+rm(df)
 # write prediction 
-data.table::fwrite(pred_labs, file = pred_path)
+data.table::fwrite(pred_labs,
+                   file = pred_path)
 
-# save correlaion matrix 
-pred = t(pred) %>% as.data.frame() %>% rownames_to_column('cell')
-colnames(pred)[1] = ""
+# The prob matrix includes the rand category, since we are planning to
+# use it in CAWPE, we should remove the rand category and re-normalized.
+# removing rand column
+prob_matrix = t(pred) %>% .[,-which(colnames(.) == "rand")]
+prob_matrix[prob_matrix < 0] <- 0
+prob_matrix <- apply(prob_matrix,1,function(x){
+  x / sum(x)
+}) %>% t()
 
-data.table::fwrite(pred, file = paste0(out_path, '/singleCellNet_pred_score.csv'))
+prob_matrix = prob_matrix %>% as.data.frame() %>% rownames_to_column('cell')
+colnames(prob_matrix)[1] = ""
+
+
+data.table::fwrite(prob_matrix, file = paste0(out_path, '/singleCellNet_pred_score.csv'))
 
 #----------------------------------------

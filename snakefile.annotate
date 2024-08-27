@@ -329,7 +329,8 @@ rule predict_scPred:
     pred = config['output_dir'] + "/{sample}/{reference}/scPred_{classifier}/scPred_{classifier}_pred.csv"
   params:
     basedir = {workflow.basedir},
-    classifier = "{classifier}"
+    classifier = "{classifier}",
+    threshold = config['scPred']['threshold']
   log: 
     config['output_dir'] + "/{sample}/{reference}/scPred_{classifier}/scPred_{classifier}.log"
   benchmark:
@@ -345,6 +346,7 @@ rule predict_scPred:
     {output.pred} \
     {threads} \
     {params.classifier} \
+    {params.threshold} \
     &> {log}
     """
     
@@ -691,7 +693,8 @@ rule predict_singleCellNet:
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/singleCellNet/singleCellNet_pred.csv"
   params:
-    basedir = {workflow.basedir}
+    basedir = {workflow.basedir},
+    threshold = config['singleCellNet']['threshold']
   log:
     config['output_dir'] + "/{sample}/{reference}/singleCellNet/singleCellNet.log"
   benchmark:
@@ -706,6 +709,7 @@ rule predict_singleCellNet:
     {input.model} \
     {output.pred} \
     {threads} \
+    {params.threshold} \
     &> {log}
     """
 

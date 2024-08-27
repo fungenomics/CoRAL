@@ -72,6 +72,8 @@ colnames(prob_mat) <- gsub(x = colnames(predictions),
                               pattern = "^prediction.score.",
                               replacement = "")
 prob_mat <- prob_mat[,-which(colnames(prob_mat) %in% c("max","predicted.id"))]
+## It is in the same order as the input labels from the seurat_ref, I checked sorting the labels in the input
+colnames(prob_mat) <- unique(seurat_ref$label)
 prob_mat <- prob_mat %>% tibble::rownames_to_column(" ")
 ## The sum per cell is 1, so we can consider them as a probability matrix
 data.table::fwrite(prob_mat, 

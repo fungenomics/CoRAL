@@ -42,13 +42,26 @@ message('@ DONE')
 
 #------------- Train SingleR -------------
 
+# specify parallelization configuration depending on number of threads
+if(threads > 1){
+  
+  bpparam <- BiocParallel::MulticoreParam(workers = threads)
+  # parallel <- TRUE
+  
+} else {
+  
+  bpparam <- BiocParallel::SerialParam()
+  # parallel <- FALSE
+  
+}
 # train SingleR
 message('@ TRAINING MODEL')
 singler = trainSingleR(ref, 
                        labels=labels$label, 
 		       assay.type = "logcounts",
 		       de.method = "wilcox",
-		       de.n = 10)
+		       de.n = 10,
+		       BPPARAM = bpparam)
 message('@ DONE')
 
 # save trained model 

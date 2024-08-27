@@ -101,10 +101,23 @@ colnames(out[['predicted']]) <- c("cell", "Correlation", "Correlation_score")
 # write prediction 
 data.table::fwrite(out[['predicted']], file = pred_path)
 
-# save correlaion matrix 
-out[['cor_matrix']] = out[['cor_matrix']] %>% as.data.frame() %>% rownames_to_column('cell')
-colnames(out[['cor_matrix']])[1] = ""
+# save correlaion results (contains the predicted results per cell and the correlation matrix)
+save(out,
+     file = paste0(out_path, '/Correlation_output_object.Rdata'))
 
-data.table::fwrite(out[['cor_matrix']], file = paste0(out_path, '/Correlation_pred_score.csv'))
+# Convert correlation scores to prob matrix to use it as input in CAWPE
+prob_matrix <- out[['cor_matrix']]
+# sum(prob_matrix < 0)
+## The scores that are negative we set it to zero
+prob_matrix[prob_matrix < 0] <- 0
+prob_matrix <- apply(prob_matrix,1,function(x){
+                                      x / sum(x)
+                                    }) %>% t()
+  
+prob_matrix = prob_matrix %>% as.data.frame() %>% rownames_to_column('cell')
+colnames(prob_matrix)[1] = ""
+
+data.table::fwrite(prob_matrix,
+                   file = paste0(out_path, '/Correlation_pred_score.csv'))
 
 #----------------------------------------
