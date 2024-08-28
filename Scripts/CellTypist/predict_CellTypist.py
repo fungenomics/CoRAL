@@ -60,7 +60,7 @@ model["Model"].n_jobs = threads
 #------------- Predict CellTypist -------------
 
 predictions = celltypist.annotate(query,
-                                  model = model_path,
+                                  model = model,
                                   majority_voting = majority_voting,
                                   mode = 'prob match',
                                   p_thres = threshold)
@@ -90,21 +90,18 @@ predictions.to_plots(out_other_path)
 print('@ DONE')
 
 ### Save the prob matrix
-print('@ WRITTING OUTPUT OBJECT')
-filename = out_other_path + '/CellTypist_output_object.h5ad'
-adata = predictions.to_adata(insert_prob = True)
-adata.write_h5ad(filename= filename,
-                  compression='gzip')
-print('@ DONE ')
+# print('@ WRITTING OUTPUT OBJECT')
+# filename = out_other_path + '/CellTypist_output_object.h5ad'
+# adata = predictions.to_adata(insert_prob = True)
+# adata.write_h5ad(filename= filename,
+#                   compression='gzip')
 
-# make binary output matrix
-pred_df['prob'] = 1
-pred_df = pred_df.pivot_table(index=pred_df.columns[0], columns='CellTypist', values='prob', fill_value=0).reset_index()
-    
-# rename column names 
-pred_df.columns.name = None  # Remove the columns' name to match the R code
-pred_df.columns = [''] + list(pred_df.columns[1:])
+#Extract only the prob matrix, normalize it to sum 1 with x /sum(x)
 
+df = predictions.probability_matrix.copy()
+df = df.apply(lambda x: x / x.sum(), axis=1)
 # save binary matrix
-pred_df.to_csv(out_other_path + '/CellTypist_pred_score.csv', index=False)
+df.to_csv(out_other_path + '/CellTypist_pred_score.csv',
+               index=True)
                                   
+print('@ DONE ')

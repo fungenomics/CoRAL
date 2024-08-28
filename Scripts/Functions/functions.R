@@ -58,19 +58,19 @@ get_data_reference <- function(ref_path,
     if(is(sce,'Seurat')){
       mtx <- sce@assays$RNA@counts %>% as.matrix %>% t() %>% as.data.frame()
       lab <- data.frame(row.names = colnames(sce),
-                        label = sce@meta.data[,lab_path,drop=T])
+                        label = as.character(sce@meta.data[,lab_path,drop=T]))
       
       if(!is.null(batch_path)){
-        lab$batch <- sce@meta.data[,batch_path,drop=T]
+        lab$batch <- as.character(sce@meta.data[,batch_path,drop=T])
       }
       
     } else if(class(sce) %in% c('SingleCellExperiment','LoomCellExperiment')){
       mtx <- assay(sce,'counts') %>% as.matrix() %>% t() %>% as.data.frame()
       lab <- data.frame(row.names = colnames(sce),
-                        label = colData(sce)[,lab_path,drop=T])
+                        label = as.character(colData(sce)[,lab_path,drop=T]))
       
       if(!is.null(batch_path)){
-        lab$batch <- colData(sce)[,batch_path,drop=T]
+        lab$batch <- as.character(colData(sce)[,batch_path,drop=T])
       }
       
     } else{
