@@ -269,18 +269,18 @@ create_color_pal = function(class, mb = 'Juarez'){
 
 calculate_percentage_unresolved = function(pred, order, cons_tools){
   warn = pred %>% 
-    select(order) %>%
-    pivot_longer(order) %>% 
-    mutate(value = factor(value)) %>%
-    group_by(name) %>%
-    count(value, .drop = F) %>%
-    mutate(frac = n/sum(n)*100) %>%
-    filter(!(!name == 'Consensus' & value == 'No Consensus')) %>%
-    filter(value %in% c('No Consensus', 'Unresolved')) %>%
-    mutate(in_cons = ifelse(name %in% cons_tools & name != 'Consensus', 'YES', '')) %>%
-    mutate(warn = case_when(frac >= 70 ~ 'HIGH', 
-                            frac < 70 & frac > 30 ~ 'MEDIUM',
-                            frac <= 30 ~ 'LOW'))
+    dplyr::select(order) %>%
+    tidyr::pivot_longer(order) %>% 
+    dplyr::mutate(value = factor(value)) %>%
+    dplyr::group_by(name) %>%
+    dplyr::count(value, .drop = F) %>%
+    dplyr::mutate(frac = n/sum(n)*100) %>%
+    dplyr::filter(!(!name == 'Consensus' & value == 'No Consensus')) %>%
+    dplyr::filter(value %in% c('No Consensus', 'Unresolved')) %>%
+    dplyr::mutate(in_cons = ifelse(name %in% cons_tools & name != 'Consensus', 'YES', '')) %>%
+    dplyr::mutate(warn = case_when(frac >= 70 ~ 'HIGH', 
+                                   frac < 70 & frac > 30 ~ 'MEDIUM',
+                                   frac <= 30 ~ 'LOW'))
    if(nrow(warn) != 0){
    warn = data.frame(TOOL = warn$name, 
                      'IN CONSENSUS' = warn$in_cons,
@@ -427,15 +427,15 @@ plot_tool_correlation_heatmap = function(seurat, tools){
 plot_bar_largest_group = function(seurat, meta_column = '', pal = pal, fr = 0.1){
   
 df = seurat@meta.data %>%
-  count(seurat_clusters, .data[[meta_column]]) %>%
-  group_by(seurat_clusters) %>% 
-  mutate(`%` = (n / sum(n)))  %>% 
-  mutate(meta = ifelse(`%` < fr, NA, .data[[meta_column]]))
+  dplyr::count(seurat_clusters, .data[[meta_column]]) %>%
+  dplyr::group_by(seurat_clusters) %>% 
+  dplyr::mutate(`%` = (n / sum(n)))  %>% 
+  dplyr::mutate(meta = ifelse(`%` < fr, NA, .data[[meta_column]]))
 
 pal = pal[unique(na.omit(df$meta))]
 
 df = df %>% 
-     mutate(meta = factor(meta, levels = c(NA, names(pal)), exclude = NULL))
+  dplyr::mutate(meta = factor(meta, levels = c(NA, names(pal)), exclude = NULL))
 
 p1 = df %>%
   ggplot(aes(x = seurat_clusters, y = `%`, fill = meta, text = sprintf(" %s <br> %s ", 
@@ -528,7 +528,7 @@ feature_plot_seurat_meta = function(seurat, meta_cols){
 umap_plotly = function(seurat, meta_column, pal){
 
   p1 = cbind(seurat@reductions$umap@cell.embeddings, seurat@meta.data) %>%
-  slice(sample(1:n())) %>%
+  dplyr::slice(sample(1:n())) %>%
   ggplot(aes(UMAP_1, UMAP_2, color = .data[[meta_column]], text = .data[[meta_column]])) + 
   geom_point(alpha = 0.8) + 
   scale_color_manual(values = pal) +
