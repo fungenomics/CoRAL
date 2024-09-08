@@ -120,7 +120,7 @@ if(consensus_type == 'majority' & all(min_agree != 0)){
       ungroup()
      
     print(head(metrics_file))
-
+    
     for(aph in alpha){
     # read probability matrixes
     data = lapply(prob_files, function(f){data.table::fread(f, check.names = F) %>% 
@@ -150,7 +150,12 @@ if(consensus_type == 'majority' & all(min_agree != 0)){
                                        pred = data$class,
                                        from = 'label',
                                        to = ontology_column)
-
+         
+      # save CAWPE scores 
+      data.table::fwrite(data, 
+                         file = paste0(dirname(summary_path), '/CAWPE_scores.alpha', aph, '.', ontology_column, '.tsv' ), 
+			 sep = '\t')
+      
       data = data %>% 
          group_by(cellname, ontology) %>% 
          summarise(CAWPE = mean(CAWPE)) %>% 
