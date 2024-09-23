@@ -246,7 +246,7 @@ get_cawpe_columns = function(CAWPE_type){
     if(CW_tp == 'CAWPE_T'){
       cols = c('tool')
     }else if(CW_tp == 'CAWPE_CT'){
-      cols = c('tool', 'class')
+      cols = c('tool', 'ontology')
     }
   return(cols) 
 }
@@ -539,7 +539,23 @@ umap_plotly = function(seurat, meta_column, pal){
   return(p2)
 }
 
-
+plot_heatmap_CAWPE <- function(CAWPE_matrix){
+  entropy <- CAWPE_matrix[,1]
+  CAWPE_matrix <- CAWPE_matrix[,-1]
+  col_fun = circlize::colorRamp2(c(1, 0.5, 0), 
+                                 c("#5C80BC", "#F2EFC7", "#FF595E")
+                                 )
+  
+  hr <- rowAnnotation(Entropy = entropy,
+                      col = list(Entropy = col_fun)
+                      )
+  h <- Heatmap(CAWPE_matrix,
+          show_row_names = F,
+          right_annotation = hr,
+          col = col_fun,
+          name = "CAWPE score")
+  return(h)
+}
 #----- PLOTS FOR NOTEBOOK BENCHMARK ------------------------------------
 
 # Plot confusion matrix as a heatmap 

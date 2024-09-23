@@ -114,6 +114,7 @@ if(consensus_type == 'majority' & all(min_agree != 0)){
     # read metric file and caluclate mean metric per tool or tool + label 
     metrics_file = metrics_file %>% 
       filter(tool %in% consensus_tools) %>%
+      mutate(ontology = class) %>% 
       mutate(metric = .data[[metric]]) %>% 
       group_by(across(all_of(cols))) %>%
       summarize(mean_metric = mean(metric)) %>%
@@ -122,59 +123,72 @@ if(consensus_type == 'majority' & all(min_agree != 0)){
     print(head(metrics_file))
     
     for(aph in alpha){
-    # read probability matrixes
-    data = lapply(prob_files, function(f){data.table::fread(f, check.names = F) %>% 
-          rename(cellname = V1) %>% 
-          mutate(tool = basename(dirname(f)))})
-
+      # read probability matrixes
+      data = lapply(prob_files, function(f){data.table::fread(f, check.names = F) %>% 
+            rename(cellname = V1) %>% 
+            mutate(tool = basename(dirname(f)))})
+      
       # merge prob matrices and join with metric scores
       data = bind_rows(data) %>% 
-        select(cellname, all_of(unique(ontology[['label']])), tool) %>%
-        pivot_longer(!c('cellname', 'tool'), 
-                    names_to = 'class', 
-                    values_to = 'prob') %>%
-        left_join(metrics_file, by = cols) %>%
-        na.omit()
+            select(cellname, all_of(unique(ontology[['label']])), tool) %>%
+            pivot_longer(!c('cellname', 'tool'), 
+                        names_to = 'class', 
+                        values_to = 'prob') %>% 
+        as.data.frame()
       
+      data$ontology = apply_ontology(df_ontology = ontology,
+                                     pred = data$class,
+                                     from = 'label',
+                                     to = ontology_column)  
+      # I treat everything like an ontology, for the prob I sum the prob,
+      # for the metric since it is already calculated at the ontology level, 
+      # just do unique
+      data <- data  %>%
+            left_join(metrics_file, by = cols) %>%
+            na.omit() %>%
+            group_by(cellname,tool, ontology) %>% 
+            summarise(prob_ont = sum(prob),
+                      mean_metric = unique(mean_metric))
       # calculate cawpe       
-      data$CAWPE = (as.numeric(data$mean_metric)^aph) * as.numeric(data$prob)
-       
+      data$CAWPE = (as.numeric(data$mean_metric)^aph) * as.numeric(data$prob_ont)
+         
       # add up the CAWPE scores for each class for each cell 
       data = data %>%
-         group_by(cellname, class) %>%
-         summarise(CAWPE = sum(CAWPE)) %>%
-         ungroup() %>% 
-         as.data.frame()
-
-      data$ontology = apply_ontology(df_ontology = ontology,
-                                       pred = data$class,
-                                       from = 'label',
-                                       to = ontology_column)
-         
-      # save CAWPE scores 
-      data.table::fwrite(data, 
-                         file = paste0(dirname(summary_path), '/CAWPE_scores.alpha', aph, '.', ontology_column, '.tsv' ), 
-			 sep = '\t')
+           group_by(cellname, ontology) %>%
+        #Doing the mean it norm by the number of tools and is comparable between ref (value between 0 and 1)
+           summarise(CAWPE = mean(CAWPE)) %>% 
+           ungroup() 
       
       data = data %>% 
-         group_by(cellname, ontology) %>% 
-         summarise(CAWPE = mean(CAWPE)) %>% 
-         group_by(cellname) %>% 
-         mutate(prop = CAWPE / sum(CAWPE)) %>% 
-         mutate(entropy = ifelse(test = length(ontology) > 1,
-                                 yes = (-sum(prop * log2(prop),na.rm = T))/log2(length(ontology)),
-                                 no = 0)) %>% 
-         group_by(cellname) %>%
-         dplyr::slice(which.max(CAWPE)) %>%
-         rename(Consensus = ontology)  %>% 
-         as.data.frame
-
-        rownames(data) = data$cellname
-
-        print(head(data))
-       
-       print('here')
+             group_by(cellname) %>% 
+             mutate(prop = CAWPE / sum(CAWPE)) %>% 
+             mutate(entropy = ifelse(test = length(ontology) > 1,
+                                     yes = (-sum(prop * log2(prop),na.rm = T))/log2(length(ontology)),
+                                     no = 0)) %>% 
+            ungroup() %>% select(-prop) %>% 
+            as.data.frame()
+        
+      data.wd <- data %>% 
+                 pivot_wider(names_from = ontology,
+                             values_from=CAWPE,
+                             values_fill = 0)
+        
+      # save CAWPE scores 
+      data.table::fwrite(data.wd, 
+                         file = paste0(dirname(summary_path),'/',CW_tp,'_', aph, '_', ontology_column, '_scores.csv' ))
       
+      rm(data.wd)
+      
+      data = data %>% 
+             group_by(cellname) %>%
+             dplyr::slice(which.max(CAWPE)) %>%
+             rename(Consensus = ontology)  %>% 
+             as.data.frame()
+  
+      rownames(data) = data$cellname
+  
+      print(head(data))
+        
       consensus[, paste0("CAWPE_",CW_tp,"_",aph)]         = data[consensus$cellname, "CAWPE", drop=T]
       consensus[, paste0("CAWPE_entropy_",CW_tp,"_",aph)] = data[consensus$cellname, "entropy", drop=T]
       consensus[, paste0("Consensus_",CW_tp,"_",aph)]     = data[consensus$cellname, "Consensus", drop=T]

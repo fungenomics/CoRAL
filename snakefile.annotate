@@ -161,7 +161,7 @@ rule consensus:
     consensus_type = "{consensus_type}",
     sample = config["output_dir"] + "/{sample}/{reference}/",
     min_agree = config["consensus"]["type"]["majority"]["min_agree"],
-    metrics_file =  lambda wildcards:(f'{config["references"][wildcards.reference]["output_dir_benchmark"]}/'f'{wildcards.reference}/report/metrics_label.csv'),
+    metrics_file =  lambda wildcards:(f'{config["references"][wildcards.reference]["output_dir_benchmark"]}/'f'{wildcards.reference}/report/metrics_{wildcards.ontology}.csv'),
     CAWPE_mode = config["consensus"]["type"]["CAWPE"]["mode"],
     alpha = config["consensus"]["type"]["CAWPE"]["alpha"],
     ontology_label = "{ontology}",
