@@ -2,8 +2,6 @@
 library(rBayesianOptimization)
 library(tidyverse)
 
-set.seed(1234)
-
 initial.options = commandArgs(trailingOnly = FALSE)
 file.arg.name = "--file="
 script.name = sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)]) 
@@ -11,6 +9,10 @@ script.name = sub(file.arg.name, "", initial.options[grep(file.arg.name, initial
 source(paste0(dirname(dirname(script.name)), "/Functions/functions.R"))
 
 args = commandArgs(trailingOnly = TRUE)
+
+print(paste0("@ Using seed ",as.character(args[12])))
+set.seed(as.numeric(args[12]))
+
 ref_path = args[1]
 lab_path = args[2]
 out_path = args[3]
@@ -137,7 +139,12 @@ for (i in 1:n_folds){
   train_labels = labels[-folds[[i]], ,drop=F]
   train_labels = train_labels %>% rownames_to_column("cell")
   colnames(train_labels)[1] = ""
-
+  
+  # check if you have enough cells per label in each fold
+  min_cell_per_fold_ct <- 10
+  if(!all(table(train_labels$label) >= min_cell_per_fold_ct)){
+    stop(paste0("In fold ",i, " not all the training labels have more than ", min_cell_per_fold_ct, " cells"))
+  }
   # save csv files 
   data.table::fwrite(test, paste0(out_path, '/fold', i, '/test.csv'))
   data.table::fwrite(test_labels, paste0(out_path, '/fold', i, '/test_labels.csv'))

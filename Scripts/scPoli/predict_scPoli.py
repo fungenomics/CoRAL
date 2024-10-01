@@ -25,16 +25,7 @@ def get_max_column_and_value(row):
     proba_label = row.max()
     return pred_label, proba_label
   
-# def normalize(x):
-#   """Compute softmax values for each sets of scores in x."""
-#   return (x - np.min(x) / np.range(x))
 
-def normalize(x):
-    """Normalize each row to the range 0-1."""
-    min_val = np.min(x, axis=1, keepdims=True)
-    max_val = np.max(x, axis=1, keepdims=True)
-    return (x - min_val) / (max_val - min_val)
-  
 #--------------- Parameters -------------------
 sample_path = str(sys.argv[1])
 model_path = str(sys.argv[2])
@@ -72,6 +63,8 @@ sc.pp.normalize_total(query, target_sum=1e4)
 
 # Logarithmize the data:
 sc.pp.log1p(query)
+## Convert format to avoid problems
+query.X = query.X.astype('float32')
 
 query.obs['batch'] = 'query'
 query.obs['labels'] = 'Unknown'
@@ -91,6 +84,7 @@ scpoli_query.train(
 )
 
 pred_proba = scpoli_query.classify(query,
+                                   get_prob=True,
                                    scale_uncertainties=False,
                                    log_distance=False)
                                    
@@ -105,12 +99,11 @@ print('@ DONE')
 
 #----------------------------------------
 # Get the distances and reescale to an score that the higher the better
-mtx = 1/(pred_proba['labels']['weighted_distances'] + 1)
-mtx = normalize(mtx)
-# mtx = pred_proba['labels']['weighted_distances']
-df = pd.DataFrame(mtx,index = query.obs_names,columns = scPoli_model.model_cell_types)
+df = pd.DataFrame(pred_proba['labels']['weighted_distances'].copy(),
+                  index = query.obs_names,
+                  columns = scPoli_model.model_cell_types)
 df['pred_label'], df['score_label'] = zip(*df.apply(get_max_column_and_value, axis=1))
-all(pred_proba['labels']['preds'] == df.pred_label)
+# df['pred_label'], df['score_label'] = zip(*df.apply(get_max_column_and_value, axis=1))
 # Save the score matrix
 print('@ WRITTING PROB MATRIX ')
 filename = out_other_path + '/scPoli_pred_score.csv'

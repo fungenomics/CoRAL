@@ -58,19 +58,19 @@ get_data_reference <- function(ref_path,
     if(is(sce,'Seurat')){
       mtx <- sce@assays$RNA@counts %>% as.matrix %>% t() %>% as.data.frame()
       lab <- data.frame(row.names = colnames(sce),
-                        label = sce@meta.data[,lab_path,drop=T])
+                        label = as.character(sce@meta.data[,lab_path,drop=T]))
       
       if(!is.null(batch_path)){
-        lab$batch <- sce@meta.data[,batch_path,drop=T]
+        lab$batch <- as.character(sce@meta.data[,batch_path,drop=T])
       }
       
     } else if(class(sce) %in% c('SingleCellExperiment','LoomCellExperiment')){
       mtx <- assay(sce,'counts') %>% as.matrix() %>% t() %>% as.data.frame()
       lab <- data.frame(row.names = colnames(sce),
-                        label = colData(sce)[,lab_path,drop=T])
+                        label = as.character(colData(sce)[,lab_path,drop=T]))
       
       if(!is.null(batch_path)){
-        lab$batch <- colData(sce)[,batch_path,drop=T]
+        lab$batch <- as.character(colData(sce)[,batch_path,drop=T])
       }
       
     } else{
@@ -246,7 +246,7 @@ get_cawpe_columns = function(CAWPE_type){
     if(CW_tp == 'CAWPE_T'){
       cols = c('tool')
     }else if(CW_tp == 'CAWPE_CT'){
-      cols = c('tool', 'class')
+      cols = c('tool', 'ontology')
     }
   return(cols) 
 }
@@ -269,18 +269,18 @@ create_color_pal = function(class, mb = 'Juarez'){
 
 calculate_percentage_unresolved = function(pred, order, cons_tools){
   warn = pred %>% 
-    select(order) %>%
-    pivot_longer(order) %>% 
-    mutate(value = factor(value)) %>%
-    group_by(name) %>%
-    count(value, .drop = F) %>%
-    mutate(frac = n/sum(n)*100) %>%
-    filter(!(!name == 'Consensus' & value == 'No Consensus')) %>%
-    filter(value %in% c('No Consensus', 'Unresolved')) %>%
-    mutate(in_cons = ifelse(name %in% cons_tools & name != 'Consensus', 'YES', '')) %>%
-    mutate(warn = case_when(frac >= 70 ~ 'HIGH', 
-                            frac < 70 & frac > 30 ~ 'MEDIUM',
-                            frac <= 30 ~ 'LOW'))
+    dplyr::select(order) %>%
+    tidyr::pivot_longer(order) %>% 
+    dplyr::mutate(value = factor(value)) %>%
+    dplyr::group_by(name) %>%
+    dplyr::count(value, .drop = F) %>%
+    dplyr::mutate(frac = n/sum(n)*100) %>%
+    dplyr::filter(!(!name == 'Consensus' & value == 'No Consensus')) %>%
+    dplyr::filter(value %in% c('No Consensus', 'Unresolved')) %>%
+    dplyr::mutate(in_cons = ifelse(name %in% cons_tools & name != 'Consensus', 'YES', '')) %>%
+    dplyr::mutate(warn = case_when(frac >= 70 ~ 'HIGH', 
+                                   frac < 70 & frac > 30 ~ 'MEDIUM',
+                                   frac <= 30 ~ 'LOW'))
    if(nrow(warn) != 0){
    warn = data.frame(TOOL = warn$name, 
                      'IN CONSENSUS' = warn$in_cons,
@@ -307,36 +307,79 @@ calculate_percentage_unresolved = function(pred, order, cons_tools){
 }
 
 
-get_pred = function(pred, tool, true){
-  pred %>%
-     select(tool) %>%
-     mutate(label = .data[[tool]],
-            label = ifelse(!label %in% true$label, NA, label),
-            label = factor(label, ordered = TRUE)) %>%
-  return()
-}
+# get_pred = function(pred, tool, true){
+#   pred %>%
+#      select(tool) %>%
+#      mutate(label = .data[[tool]],
+#             label = ifelse(!label %in% true$label, NA, label),
+#             label = factor(label, ordered = TRUE)) %>%
+#   return()
+# }
 
-# gets stat for each fold and returns data frame 
-get_stat = function(x, stat){
-  x$byClass %>% 
-  as.data.frame() %>%
-  rownames_to_column('class') %>%
-  separate(class, into = c(NA, 'class'), sep = ': ') %>%
-  select(class, .data[[stat]]) %>%
-  mutate(fold = x$fold,
-         tool = x$tool)
-}
+# # gets stat for each fold and returns data frame 
+# get_stat = function(x, stat){
+#   x$byClass %>% 
+#   as.data.frame() %>%
+#   rownames_to_column('class') %>%
+#   separate(class, into = c(NA, 'class'), sep = ': ') %>%
+#   select(class, .data[[stat]]) %>%
+#   mutate(fold = x$fold,
+#          tool = x$tool)
+# }
 
 # gets all stats for each fold and returns data frame 
-get_all_stats = function(x){
-  x$byClass %>% 
-  as.data.frame() %>%
-  rownames_to_column('class') %>%
-  separate(class, into = c(NA, 'class'), sep = ': ') %>%
-  mutate(fold = x$fold,
-         tool = x$tool)
-}
+# get_all_stats = function(x){
+#   x$byClass %>% 
+#   as.data.frame() %>%
+#   rownames_to_column('class') %>%
+#   separate(class, into = c(NA, 'class'), sep = ': ') %>%
+#   mutate(fold = x$fold,
+#          tool = x$tool)
+# }
 
+# calculate the Precision, Recall and F1 in the benchmarking notebook
+get_metrics <- function(data){
+  metrics.df <- data %>% 
+    group_by(prediction) %>% 
+    #total of predicted to being that class (TP + FP)
+    mutate(Sum_N = n()) %>% 
+    ungroup() %>% 
+    group_by(class) %>% 
+    #total of true class (TP + FN)
+    mutate(Sum_M=n()) %>% 
+    ungroup() %>%
+    group_by(class,prediction) %>%
+    summarise(TP = sum(class == prediction),
+              # FP = sum(true != prediction),
+              Sum_N = unique(Sum_N),
+              Sum_M = unique(Sum_M)
+    ) %>% 
+    ungroup() %>%
+    filter(class == prediction) %>%  
+    group_by(class) %>%
+    mutate(Prec_P = TP/Sum_N,
+           Rec_P  = TP/Sum_M) %>% 
+    ungroup() %>% 
+    group_by(class) %>% 
+    summarise(F1 = (2*Rec_P*Prec_P)/(Prec_P+Rec_P),
+              Recall = Rec_P,
+              Precision = Prec_P) %>% 
+    as.data.frame()
+  ## Complete the missing assignation with NA
+  ## This could be a category that was never assigned so its value is zero 
+  ## First check the missing
+  missing.cat <-setdiff(unique(data$class),metrics.df$class)
+  if(length(missing.cat) > 0){
+    metrics.df <- rbind(metrics.df,
+                        data.frame(class = missing.cat,
+                                   F1 = 0,
+                                   Recall = 0,
+                                   Precision = 0
+                         )
+                      )
+  }
+  return(metrics.df)
+}
 #----- PLOTS FOR NOTEBOOK ANNOTATION ------------------------------------
 
 plot_tool_correlation_heatmap = function(seurat, tools){
@@ -384,15 +427,15 @@ plot_tool_correlation_heatmap = function(seurat, tools){
 plot_bar_largest_group = function(seurat, meta_column = '', pal = pal, fr = 0.1){
   
 df = seurat@meta.data %>%
-  count(seurat_clusters, .data[[meta_column]]) %>%
-  group_by(seurat_clusters) %>% 
-  mutate(`%` = (n / sum(n)))  %>% 
-  mutate(meta = ifelse(`%` < fr, NA, .data[[meta_column]]))
+  dplyr::count(seurat_clusters, .data[[meta_column]]) %>%
+  dplyr::group_by(seurat_clusters) %>% 
+  dplyr::mutate(`%` = (n / sum(n)))  %>% 
+  dplyr::mutate(meta = ifelse(`%` < fr, NA, .data[[meta_column]]))
 
 pal = pal[unique(na.omit(df$meta))]
 
 df = df %>% 
-     mutate(meta = factor(meta, levels = c(NA, names(pal)), exclude = NULL))
+  dplyr::mutate(meta = factor(meta, levels = c(NA, names(pal)), exclude = NULL))
 
 p1 = df %>%
   ggplot(aes(x = seurat_clusters, y = `%`, fill = meta, text = sprintf(" %s <br> %s ", 
@@ -485,7 +528,7 @@ feature_plot_seurat_meta = function(seurat, meta_cols){
 umap_plotly = function(seurat, meta_column, pal){
 
   p1 = cbind(seurat@reductions$umap@cell.embeddings, seurat@meta.data) %>%
-  slice(sample(1:n())) %>%
+  dplyr::slice(sample(1:n())) %>%
   ggplot(aes(UMAP_1, UMAP_2, color = .data[[meta_column]], text = .data[[meta_column]])) + 
   geom_point(alpha = 0.8) + 
   scale_color_manual(values = pal) +
@@ -496,7 +539,23 @@ umap_plotly = function(seurat, meta_column, pal){
   return(p2)
 }
 
-
+plot_heatmap_CAWPE <- function(CAWPE_matrix){
+  entropy <- CAWPE_matrix[,1]
+  CAWPE_matrix <- CAWPE_matrix[,-1]
+  col_fun = circlize::colorRamp2(c(1, 0.5, 0), 
+                                 c("#5C80BC", "#F2EFC7", "#FF595E")
+                                 )
+  
+  hr <- rowAnnotation(Entropy = entropy,
+                      col = list(Entropy = col_fun)
+                      )
+  h <- Heatmap(CAWPE_matrix,
+          show_row_names = F,
+          right_annotation = hr,
+          col = col_fun,
+          name = "CAWPE score")
+  return(h)
+}
 #----- PLOTS FOR NOTEBOOK BENCHMARK ------------------------------------
 
 # Plot confusion matrix as a heatmap 
@@ -526,8 +585,8 @@ plot_stat = function(cm_byclass, stat){
 
 p = cm_byclass %>% 
   as.data.frame() %>%
-  rownames_to_column('class') %>%
-  separate(class, into = c(NA, 'class'), sep = ': ') %>%
+  # rownames_to_column('class') %>%
+  # separate(class, into = c(NA, 'class'), sep = ': ') %>%
   ggplot(aes(reorder(class, -.data[[stat]]), .data[[stat]])) +
   geom_bar(stat = 'identity', col = 'white', fill = 'lightgrey') +
   theme_bw() +
@@ -551,10 +610,9 @@ return(p)
 # plot metric accross folds for each class as a boxplot  
 plot_stat_boxplot = function(list, tool, stat){
   
-df = lapply(list[[tool]], get_stat, stat = stat) %>% bind_rows()
-
+df = list[[tool]] %>% bind_rows() %>% as.data.frame()
 df[is.na(df)] = 0
-
+df$stat <- df[,stat]
 df %>%
   ggplot(aes(reorder(class, -.data[[stat]], mean), .data[[stat]])) +
   geom_boxplot() +
@@ -578,9 +636,9 @@ df %>%
 # plot average stat for all tools 
 plot_mean_tool = function(list, stat, tools, train_lab){
 
-df = lapply(list, function(x){lapply(x, get_stat, stat = stat) %>% bind_rows()})
+# df = lapply(list, function(x){lapply(x, get_stat, stat = stat) %>% bind_rows()})
 
-df = bind_rows(df) %>% 
+df = bind_rows(list) %>% 
   group_by(class, tool) %>%
   mutate(mean = mean(.data[[stat]])) %>%
   distinct(class, tool, mean) %>% 

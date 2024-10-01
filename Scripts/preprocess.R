@@ -7,9 +7,11 @@ script.name = sub(file.arg.name, "", initial.options[grep(file.arg.name, initial
 
 source(paste0(dirname(script.name), "/Functions/functions.R"))
 
-set.seed(1234)
-
 args = commandArgs(trailingOnly = TRUE)
+
+print(paste0("@ Using seed ",as.character(args[14])))
+set.seed(as.numeric(args[14]))
+
 ref_path = args[1]
 query_paths = strsplit(args[2], split = ' ')[[1]]
 out = args[3]
@@ -41,6 +43,15 @@ if(batch_path == 'None'){
 }
 
 print(batch_path)
+
+feature_selection_method = strsplit(args[12], split = ' ')[[1]]
+if(any(!(feature_selection_method %in% c("intersection","complete")))){
+  stop("The method for feature selection should be intersection or complete")
+}
+print(feature_selection_method)
+
+pipeline_mode = args[13]
+print(pipeline_mode)
 # ----- PREPROCESS REFERENCE ----------------------
 tmp <- get_data_reference(ref_path = ref_path,
                           lab_path = lab_path,
@@ -113,61 +124,87 @@ if(convert_genes){
 }
 
 # ----- QUERY --------------------------------
-
-# read query 
-for(i in 1:length(query_paths)){
+if(pipeline_mode == "annotation"){
+  # read query 
+  for(i in 1:length(query_paths)){
   
-  print(query_paths[i])
-  tmp = get_data_query(query_path = query_paths[i])
-  query = names(query_paths)[i]
+    print(query_paths[i])
+    tmp = get_data_query(query_path = query_paths[i])
+    query = names(query_paths)[i]
   
-  print(query)
-  data[[query]] = tmp
+    print(query)
+    data[[query]] = tmp
+  }
 }
 
-# ----- GENE INTERSECT ------------------------
-
-# get genes for each data frame (colnames)
-genes = lapply(data, function(x){(colnames(x))})
-
-# reduce set of genes to the intersect 
-common_genes = Reduce(intersect,genes)
-print(paste0('@Found ', length(common_genes), ' in common'))
-
-# throw error if number of common genes below % threshold of genes in any of provided datasets (ref or query) 
-threshold = 0.25
-frac = lapply(genes, function(x){length(common_genes)/length(x)})
-
-if(any(frac < threshold)){
-  names(frac) = names(data)
-  print(frac)
-  stop(paste0("@ In at least one provided dataset (ref or query), less than ",threshold*100,"% of genes appear in common gene set. See above for the fraction of genes from each dataset appearing in common gene set (note: samples with few genes will have higher fractions)"))
-}
-
-# save common genes 
-data.table::fwrite(data.frame('common_genes' = common_genes), file = paste0(out, '/model/', reference_name, '/common_genes.csv'))
-
-# filter each data set for common genes
-data = lapply(data, function(x){x[,common_genes]})
-
-#----- SAVE DATA ----------------------------------------
-
-# save reference 
-tmp = data[['ref']] %>% rownames_to_column()
-colnames(tmp)[1] = " "
-
-data.table::fwrite(tmp, file = paste0(out, '/model/', reference_name, '/expression.csv'), sep = ',')
-
-# save query 
-query_names = names(data)[!names(data) == 'ref']
-for(q in query_names){
-  print(q)
-  
-  tmp = data[[q]] %>% rownames_to_column()
+# ----- GENE SELECTION ------------------------
+for(ft_mth in feature_selection_method){
+  if(ft_mth == "intersection"){
+    ### Takes the intersection between the query and reference feature space
+    # get genes for each data frame (colnames)
+    genes = lapply(data, function(x){(colnames(x))})
+    # reduce set of genes to the intersect 
+    common_genes = Reduce(intersect,genes)
+    print(paste0('@Found ', length(common_genes), ' in common'))
+    # throw error if number of common genes below % threshold of genes in any of provided datasets (ref or query) 
+    threshold = 0.25
+    frac = lapply(genes, function(x){length(common_genes)/length(x)})
+    if(any(frac < threshold)){
+      names(frac) = names(data)
+      print(frac)
+      stop(paste0("@ In at least one provided dataset (ref or query), less than ",threshold*100,"% of genes appear in common gene set. See above for the fraction of genes from each dataset appearing in common gene set (note: samples with few genes will have higher fractions)"))
+    }
+    # save common genes 
+    data.table::fwrite(data.frame('common_genes' = common_genes),
+                       file = paste0(out, '/model/', reference_name, '/common_genes_intersect.csv'))
+    # filter each data set for common genes
+    data.it = lapply(data, function(x){x[,common_genes]})
+  } 
+  else{
+    common_genes = colnames(data[['ref']])
+    # save common genes 
+    data.table::fwrite(data.frame('common_genes' = common_genes),
+                       file = paste0(out, '/model/', reference_name, '/common_genes_complete.csv'))
+    # filter each data set for common genes
+    data.it = lapply(data, function(x){
+      ## Check which genes are missing
+      miss.genes <- setdiff(common_genes,colnames(x))
+      if(length(miss.genes) > 0){
+        ## Create a matrix with zeros
+        mtx.inp    <- matrix(0,
+                             nrow = nrow(x),
+                             ncol = length(miss.genes),
+                             dimnames = list(rownames(x),
+                                             miss.genes))
+        x <- cbind(x,mtx.inp)
+      }
+      #Keep only the genes in the reference and reorder 
+      x[,common_genes,drop=F]
+    })
+  }
+  #----- SAVE DATA ----------------------------------------
+  # save reference 
+  tmp = data.it[['ref']] %>% rownames_to_column()
   colnames(tmp)[1] = " "
   
-  data.table::fwrite(tmp, file = paste0(out, '/', q, '/', reference_name, '/expression.csv'), sep = ',')
+
+  data.table::fwrite(tmp,
+                     file = paste0(out, '/model/', reference_name, '/expression_',ft_mth,'.csv'),
+                     sep = ',')
+  
+  if(pipeline_mode == "annotation"){
+  # save query 
+  query_names = names(data.it)[!names(data.it) == 'ref']
+  for(q in query_names){
+    print(q)
+    
+    tmp = data.it[[q]] %>% rownames_to_column()
+    colnames(tmp)[1] = " "
+    
+    data.table::fwrite(tmp,
+                       file = paste0(out, '/', q, '/', reference_name, '/expression_',ft_mth,'.csv'),
+                       sep = ',')
+  }
+  }
+  rm(data.it)
 }
-
-#---------------------------------------------------------
-

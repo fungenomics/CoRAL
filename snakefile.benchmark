@@ -24,13 +24,16 @@ dt_string = now.strftime("%Y-%m-%d_%H-%M-%S")
 func.set_reference_batch_parameters(config)
 func.set_downsampling_parameters(config)
 
+func.set_benchmark_directory(config,mode = 'benchmarking')
 func.set_ontology_parameters(config,mode = 'benchmarking')
+
+# get consensus methods to run 
+consensus_run = func.get_consensus_methods(config, mode = 'benchmarking')
 
 # get tools to run
 tools_to_run = func.get_tools_to_run(config)
 consensus_tools = func.get_consensus_tools(config)
 
-func.set_benchmark_directory(config,mode = 'benchmarking')
 
 #----------------------------------------------------
 #  Final rule all 
@@ -44,9 +47,31 @@ def all_function():
         for ontology in config["references"][reference]["ontology"]["ontology_column"]
     ]
     
-rule all:
+def output_all_function():
+    return [
+        f"{output_dir_benchmark}/{reference}/benchmark.finished.succesfully.txt"
+        for reference in config['references'].keys()
+        for output_dir_benchmark in [config["references"][reference]["output_dir_benchmark"]]
+    ]
+    
+rule benchmark_all:
   input: 
       all_function()
+  output:
+    finish_file = output_all_function()
+  shell:
+    """
+    # Your string
+    input_string="{output.finish_file}"
+
+    # Convert the string into an array of files
+    IFS=' ' read -r -a file_output <<< "$input_string"
+
+    # touch a finish file for each path
+    for file in "${{file_output[@]}}"; do
+      touch "$file"
+    done
+    """
 
 #----------------------------------------------------
 #  Subset Folds 
@@ -72,7 +97,8 @@ rule subset_folds:
     downsample_value = lambda wildcards:config["references"][wildcards.reference]['downsample']['value'],
     downsample_stratified = lambda wildcards:config["references"][wildcards.reference]['downsample']['stratified'],
     ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"],
-    ontology_column = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"]
+    ontology_column = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"],
+    random_seed = config['seed']
   threads: 1
   resources:
   shell:
@@ -89,6 +115,7 @@ rule subset_folds:
     "{params.ontology_path}" \
     "{params.ontology_column}" \
     {params.batch_path} \
+    "{params.random_seed}" \
     &> {log}
     """
 
@@ -208,7 +235,8 @@ rule predict_scPred:
     pred = "{output_dir_benchmark}/{reference}/fold{folds_index}/scPred_{classifier}/scPred_{classifier}_pred.csv" 
   params:
     basedir = {workflow.basedir},
-    classifier = "{classifier}"
+    classifier = "{classifier}",
+    threshold = config['scPred']['threshold']
   log:
     "{output_dir_benchmark}/{reference}/fold{folds_index}/scPred_{classifier}/scPred_{classifier}.log"
   benchmark:
@@ -224,6 +252,7 @@ rule predict_scPred:
     {output.pred} \
     {threads} \
     {params.classifier} \
+    {params.threshold} \
     &> {log}
     """
 
@@ -565,7 +594,8 @@ rule predict_singleCellNet:
   output:
     pred = "{output_dir_benchmark}/{reference}/fold{folds_index}/singleCellNet/singleCellNet_pred.csv"
   params:
-      basedir = {workflow.basedir}
+      basedir = {workflow.basedir},
+      threshold = config['singleCellNet']['threshold']
   log:
     "{output_dir_benchmark}/{reference}/fold{folds_index}/singleCellNet/singleCellNet.log"
   benchmark:
@@ -580,6 +610,7 @@ rule predict_singleCellNet:
     {input.model} \
     {output.pred} \
     {threads} \
+    {params.threshold} \
     &> {log}
     """
 

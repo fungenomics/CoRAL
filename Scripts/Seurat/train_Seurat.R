@@ -28,7 +28,7 @@ labels = data.table::fread(lab_path, header=T, data.table=F) %>%
 
 
 # check if cell names are in the same order in labels and ref
-  order = all(as.character(rownames(labels)) == as.character(rownames(ref)))
+order = all(as.character(rownames(labels)) == as.character(rownames(ref)))
 
 # throw error if order is not the same 
 if(!order){

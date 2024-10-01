@@ -1,0 +1,51 @@
+#----------------------------------------------------
+#  Setup
+#----------------------------------------------------
+
+
+import sys
+# import custom functions 
+sys.path.insert(0, Path(workflow.basedir).parent.as_posix())
+import Scripts.Functions.functions as func
+
+
+# Define paths to different Snakefiles
+pipelines = {
+    "annotate": f"{workflow.basedir}/snakefile.annotate",
+    "benchmark": f"{workflow.basedir}/snakefile.benchmark",
+    "pretrain": f"{workflow.basedir}/snakefile.pretrain"
+}
+
+
+# Get the mode from the config
+mode = config["mode"]
+
+if mode not in pipelines:
+    print(f"Error: Invalid mode '{mode}' specified.")
+    sys.exit(1)
+
+if mode == "benchmark":
+  # In the benchmarking the finish output should be in the reference directory
+  func.set_benchmark_directory(config,mode = 'benchmarking')
+
+  def output_all_function():
+    return [
+        f"{output_dir_benchmark}/{reference}/benchmark.finished.succesfully.txt"
+        for reference in config['references'].keys()
+        for output_dir_benchmark in [config["references"][reference]["output_dir_benchmark"]]
+    ]
+  file_output = output_all_function()
+else:
+  file_output = config['output_dir'] + f"/{mode}.finished.succesfully.txt"
+
+
+rule all:
+  input:
+    file_output
+  
+#rule all:
+#  input:
+#    config['output_dir'] + f"/{mode}.finished.succesfully.txt"
+
+# Include the selected Snakefile
+include: pipelines[mode]

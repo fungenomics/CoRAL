@@ -12,6 +12,7 @@ model_path = args[2]
 pred_path = args[3]
 threads = as.numeric(args[4])
 model_type = args[5]
+threshold = as.numeric(args[6])
 # get path for other output
 out_path = dirname(pred_path)
 
@@ -40,7 +41,9 @@ query = query %>%
 
 # predict cells 
 message('@ PREDICT LABELS')
-query = scPredict(query, scpred)
+query = scPredict(query,
+                  scpred,
+                  threshold = threshold)
 message('@ DONE')
 
 head(colnames(query))
@@ -55,9 +58,17 @@ colnames(pred_labs)[2] = paste0('scPred_',model_type)
 data.table::fwrite(pred_labs, file = pred_path)
 
 # save probbability matrix 
-prob_mat = query@meta.data %>% rownames_to_column('cell') %>% select(cell | starts_with('scpred'))
+prob_mat = query@meta.data %>% select(starts_with('scpred'))
 colnames(prob_mat) = str_remove(colnames(prob_mat), 'scpred_')
 colnames(prob_mat) = gsub("_minus", "-", colnames(prob_mat))
+# Remove the column that are not prob informative 
+prob_mat = prob_mat[,-which(colnames(prob_mat) %in% c("max","prediction","no_rejection"))]
+## Normalization to use in CAWPE
+prob_mat[prob_mat < 0] <- 0
+prob_mat <- apply(prob_mat,1,function(x){
+  x / sum(x)
+}) %>% t()
+prob_mat = prob_mat %>% as.data.frame() %>% rownames_to_column('cell')
 colnames(prob_mat)[1] = ""
 
 # write probability matrix 
