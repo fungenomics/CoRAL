@@ -144,11 +144,12 @@ downsample = function(labels, downsample_stratified, downsample_value = 1){
 remove_small_clusters = function(labels, min_cells){
 
   rmv_labels = names(which(table(labels$label) < min_cells))
-  labels = labels %>% filter((!label %in% rmv_labels))
+  if(length(rmv_labels) > 0){
+    labels = labels %>% filter((!label %in% rmv_labels))
   
-  message(paste0(paste0(rmv_labels,collapse = '-'),
-  	' classes were remove because of lower number of cells (< ',as.character(min_cells),')'))
-
+    message(paste0(paste0(rmv_labels,collapse = '-'),
+  	  ' classes were remove because of lower number of cells (< ',as.character(min_cells),')'))
+  }
   return(labels)
 }
 
