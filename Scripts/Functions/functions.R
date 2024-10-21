@@ -550,10 +550,15 @@ plot_heatmap_CAWPE <- function(CAWPE_matrix){
   hr <- rowAnnotation(Entropy = entropy,
                       col = list(Entropy = col_fun)
                       )
+  clust.row <- F
+  if(nrow(CAWPE_matrix) < 60000){
+    clust.row <- T  
+  }
   h <- Heatmap(CAWPE_matrix,
           show_row_names = F,
           right_annotation = hr,
           col = col_fun,
+          cluster_rows = clust.row,
           name = "CAWPE score")
   return(h)
 }
