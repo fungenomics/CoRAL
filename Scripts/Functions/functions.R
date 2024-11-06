@@ -40,6 +40,7 @@ get_data_reference <- function(ref_path,
                                lab_path,
                                batch_path = NULL){
   ref_ext <- tools::file_ext(ref_path) %>% str_to_lower
+  
   if(ref_ext == 'csv'){ #If the expression is csv it assumes that the labels is csv
     if(tools::file_ext(lab_path) != 'csv'){
       stop('@ Labels should be provided as a .csv data.frame')
@@ -47,16 +48,24 @@ get_data_reference <- function(ref_path,
     
     # read reference 
     mtx = data.table::fread(ref_path, header = T) %>% column_to_rownames('V1')
+    
     #read labels   
     lab = data.table::fread(lab_path, header = T) %>% column_to_rownames('V1')  
+
   } else if(ref_ext %in% c('rda','rdata','rds')){ #If the rda rdata rds it assumes that the label is a vector of column name
+    
     if(ref_ext %in% c('rda','rdata')){
       sce <- loadRDa(ref_path)
     } else if(ref_ext %in% c('rds')){
       sce <- readRDS(ref_path)
     }
-    if(is(sce,'Seurat')){
+
+    if(substr(SeuratObject::Version(sce), 1, 1) %in% c('4', '3')){
+
+      print('@ Object is Seurat v3 or v4')
+
       mtx <- sce@assays$RNA@counts %>% as.matrix %>% t() %>% as.data.frame()
+      
       lab <- data.frame(row.names = colnames(sce),
                         label = as.character(sce@meta.data[,lab_path,drop=T]))
       
@@ -64,21 +73,39 @@ get_data_reference <- function(ref_path,
         lab$batch <- as.character(sce@meta.data[,batch_path,drop=T])
       }
       
-    } else if(class(sce) %in% c('SingleCellExperiment','LoomCellExperiment')){
+    } else if(substr(SeuratObject::Version(sce), 1, 1) %in% c('5')) {
+
+      print('@ Object is Seurat v5')
+
+      mtx <- sce@assays$RNA@layers$counts %>% as.matrix %>% t() %>% as.data.frame()
+      
+      lab <- data.frame(row.names = colnames(sce),
+                        label = as.character(sce@meta.data[,lab_path,drop=T]))
+      
+      if(!is.null(batch_path)){
+        lab$batch <- as.character(sce@meta.data[,batch_path,drop=T])
+      }
+
+    }else if(class(sce) %in% c('SingleCellExperiment','LoomCellExperiment')){
+
+      print('@ Objects is SingleCellExperiment or LoomCellExperiment')
+
       mtx <- assay(sce,'counts') %>% as.matrix() %>% t() %>% as.data.frame()
       lab <- data.frame(row.names = colnames(sce),
                         label = as.character(colData(sce)[,lab_path,drop=T]))
       
       if(!is.null(batch_path)){
         lab$batch <- as.character(colData(sce)[,batch_path,drop=T])
-      }
+    }
       
     } else{
-      stop("@ Object is not Seurat (v4) nor SingleCellExperiment")
+      stop("@ Object is not Seurat (v3/v4/v5) nor SingleCellExperiment")
     }
+
   } else{
-    stop('@ Formats provided are not compatible. Acceptable formats are .csv, Seurat (v4) object, SingleCellExperiment object (.rds,.rdata)')
+    stop('@ Formats provided are not compatible. Acceptable formats are .csv, Seurat (v3, v4, v5) object, SingleCellExperiment object (.rds,.rdata)')
   }
+
   return(list(exp = mtx,
               lab = lab)
   )
@@ -96,12 +123,24 @@ get_data_query <- function(query_path){
     } else if(query_ext %in% c('rds')){
       sce <- readRDS(query_path)
     }
-    if(is(sce,'Seurat')){
+    if(substr(SeuratObject::Version(sce), 1, 1) %in% c('4', '3')){
+      
+      print('@ Object is Seurat v3 or v4')
+
       mtx <- sce@assays$RNA@counts %>% as.matrix %>% t %>% as.data.frame()
+
+    } else if(substr(SeuratObject::Version(sce), 1, 1) %in% c('5')) {
+
+      print('@ Object is Seurat v5')
+
+      mtx <- sce@assays$RNA@layers$counts %>% as.matrix %>% t() %>% as.data.frame()
+    
     } else if(class(sce) %in% c('SingleCellExperiment','LoomCellExperiment')){
+
       mtx <- assay(sce,'counts') %>% as.matrix() %>% t() %>% as.data.frame()
+
     } else{
-      stop("@ Object is not Seurat (v4) nor SingleCellExperiment")
+      stop("@ Object is not Seurat (v3/v4/v5) nor SingleCellExperiment")
     }
   } else{
     stop('@ Formats provided are not compatible. Acceptable formats are .csv, Seurat object, SingleCellExperiment object (.rds,.rdata)')
