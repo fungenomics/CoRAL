@@ -111,6 +111,7 @@ if(consensus_type == 'majority' & all(min_agree != 0)){
       ms_tool = paste0(consensus_tools[!(consensus_tools %in% unique(metrics_file$tool))], collapse=', ')
       stop(paste0("@",metric, " Metric from Tools ", ms_tool, " is missing"))
     }
+    
     # read metric file and caluclate mean metric per tool or tool + label 
     metrics_file = metrics_file %>% 
       filter(tool %in% consensus_tools) %>%

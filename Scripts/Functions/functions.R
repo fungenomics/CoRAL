@@ -195,13 +195,12 @@ remove_small_clusters = function(labels, min_cells){
 #-------- CONSENSUS ------------------------------------
 
 read_prediction_files = function(path, tools){
-	
-	files = list.files(path, pattern = 'pred.csv', recursive = T, full.names = T)
 
     l = list()
     
-    for(f in files){
-    	l[[basename(dirname(f))]] = data.table::fread(f)
+    for(t in tools){
+      f = list.files(path, pattern = paste0(t, '_pred.csv'), recursive = T, full.names = T)
+    	l[[t]] = data.table::fread(f)
     }
 
     consensus = l %>% 

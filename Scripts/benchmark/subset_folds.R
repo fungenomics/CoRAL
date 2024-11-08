@@ -93,8 +93,10 @@ data.table::fwrite(save.df,
                    row.names=F,
                    sep = ",")
 rm(save.df)
+
 # check if cell names are in the same order in labels and ref
 order = all(as.character(rownames(labels)) == as.character(rownames(ref)))
+
 # throw error if order is not the same 
 if(!order){
     stop("@ Order of cells in reference and labels do not match")
@@ -113,8 +115,6 @@ head(folds)
 # Loop through folds and save training and testing data sets 
 for (i in 1:n_folds){
   message(paste0('@ SAVING FOLD ', i))
- 
-  print(head(folds[[i]]))
 
   # subset test fold
   message('subset test fold')
@@ -151,7 +151,6 @@ for (i in 1:n_folds){
   data.table::fwrite(train, paste0(out_path, '/fold', i, '/train.csv'))
   data.table::fwrite(train_labels, paste0(out_path, '/fold', i, '/train_labels.csv'))
 }
-
 
 #----- SAVE BASE ONTOLOGY ------------------------------
 

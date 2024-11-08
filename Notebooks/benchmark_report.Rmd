@@ -48,8 +48,10 @@ ontology = data.table::fread(params$ontology_path,
 # Read prediction and true labels for each tool and each fold and calculate confusion matrix and stats 
 # Save everything in a list object with hierarchy TOOL > FOLD > STATS 
 list = list()
+
 #Confusion matrix list
 cm_list <- list()
+
 for(n in 1:fold){
    
    # read tru lables 
@@ -69,11 +71,15 @@ for(n in 1:fold){
            column_to_rownames('cellname') %>% 
      as.data.frame()
 
+   # make sure the predictions and true lables are in the same order
+   pred = pred[rownames(true),]
+   
    for(t in tools){
      # tmp = get_pred(pred, t, true)
      tmp = data.frame(class = true$label,
                       prediction = pred[,t,drop=T]
                       )
+
      # list[[t]][[n]] = confusionMatrix(data = tmp$label, reference = true$label, mode = 'everything')
      list[[t]][[n]] = get_metrics(tmp)
      list[[t]][[n]]$fold = paste0('fold', n)
@@ -97,18 +103,18 @@ data.table::fwrite(accuracy_metric_res, file=paste0(params$pred_path, '/report/m
 ```{r}
 # Read training data class labels 
 
-train_lab = list()
+test_lab = list()
 for(n in 1:fold){
-  train_lab[[n]] = data.table::fread(paste0(params$pred_path, '/fold', n, '/train_labels.csv'), header = T) %>%
+  test_lab[[n]] = data.table::fread(paste0(params$pred_path, '/fold', n, '/test_labels.csv'), header = T) %>%
            column_to_rownames('V1') %>%
            mutate(label = factor(label, ordered = TRUE),
            fold = paste0('fold', n))
 }
 
-train_lab = bind_rows(train_lab)
+test_lab = bind_rows(test_lab)
 
-train_lab$label <- apply_ontology(df_ontology = ontology,
-                                    pred = as.character(train_lab$label),
+test_lab$label <- apply_ontology(df_ontology = ontology,
+                                    pred = as.character(test_lab$label),
                                     from = 'label',
                                     to = ontology_columns)
 ```
@@ -119,7 +125,7 @@ cat("  \n#", params$ref_name , "{.tabset} \n")
 cat("  \n## Summary \n")
 cat("<h3>Average metric score per tool and class</h3>") 
 
-plot_mean_tool(list, accuracy_metric, tools, train_lab)
+plot_mean_tool(list, accuracy_metric, tools, test_lab)
 
 cat("\n")
 
