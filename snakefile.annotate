@@ -10,7 +10,6 @@ import os
 import sys
 import pandas as pd
 from datetime import datetime
-
 # import custom functions 
 sys.path.insert(0, Path(workflow.basedir).parent.as_posix())
 import Scripts.Functions.functions as func
@@ -35,14 +34,14 @@ consensus_run = func.get_consensus_methods(config)
 # get tools to run
 tools_to_run = func.get_tools_to_run(config)
 consensus_tools = func.get_consensus_tools(config)
-print(consensus_tools)
+print(consensus_tools,flush=True)
 
 func.set_reference_pretrained_parameter(config,tools_to_run)
 
 # get feature selection method
 feature_selection_method = func.get_feature_selection_method(config,tools_to_run)
-print(feature_selection_method)
-print(config)
+print(feature_selection_method,flush=True)
+print(config,flush=True)
 
 #----------------------------------------------------
 #  Final rule all 

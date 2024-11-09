@@ -14,44 +14,55 @@ def set_gene_conversion_parameters(config):
 # this could be extended to the other parameters if needed
 def set_reference_pretrained_parameter(config, tools_run):
   import os
-  ## For each reference
+  import sys
+    ## For each reference
   for ref in config['references'].keys():
-    # Check if the pretrain models were required
-    try: 
-      config["references"][ref]["pretrain_models"]
-      # If so
-      #Check if the path exist
-      if not os.path.exists(config["references"][ref]["pretrain_models"]):
-        sys.exit("@ The pretrained models path doesn't exist.")
-      ## Then for the tools required to run, check if they have pretrain models
-      tools_pretrain_models = [tool_pretrain for tool_pretrain in tools_run if tool_pretrain in os.listdir(config["references"][ref]["pretrain_models"])]
-      # and flag this reference as a reference that is going to use pretrained models
-      use_pretrain = True
-    except:
-      use_pretrain = False  
-    finally:
+      use_pretrain = False  # Default to False unless criteria are met
+        # Check if pretrain models path is specified
+      pretrain_models_path = config["references"][ref].get("pretrain_models")
+      if pretrain_models_path:
+          # Check if the path exists
+          if not os.path.exists(pretrain_models_path):
+              sys.exit("@ The pretrained models path doesn't exist.")
+          # Verify tools with pretrained models
+          tools_pretrain_models = [
+              tool_pretrain for tool_pretrain in tools_run 
+              if tool_pretrain in os.listdir(pretrain_models_path)
+          ]
+            # Set paths for expression matrix and labels
+          config["references"][ref]["expression"] = os.path.join(pretrain_models_path, "expression_complete.csv")
+          config["references"][ref]["labels"] = os.path.join(pretrain_models_path, "downsampled_labels.csv")
+          config["references"][ref]['batch'] = None
+          # Adjust reference parameters if necessary
+          if config["references"][ref].get('convert_ref_mm_to_hg'):
+              print("@ The original feature space of the models cannot be changed, setting convert_ref_mm_to_hg to False.")
+              config["references"][ref]['convert_ref_mm_to_hg'] = False
+          if int(config["references"][ref].get('min_cells_per_cluster')) > 0:
+              print("@ The original feature space of the models cannot be changed, removing min_cells_per_cluster.")
+              config["references"][ref]['min_cells_per_cluster'] = 0
+          if config["references"][ref].get('downsample').get('value') > 0:
+              print("@ The original feature space of the models cannot be changed, disabling downsampling.")
+              config["references"][ref]['downsample']['value'] = 0
+              config["references"][ref]['downsample']['stratified'] = False
+            # Mark that pretrained models are being used
+          use_pretrain = True
+      # Save whether this reference uses pretrained models
       config["references"][ref]["use_pretrain"] = use_pretrain
-      #For all the tools to run
+      # Configure model directories and gene selection for each tool
       for tool in tools_run:
-        # Create the tool-reference 
-        config["references"][ref][tool] = {}
-        # If the tool has a pretrain model the input use for the model is the pretrain path
-        # and should use the complete method for the queries
-        if use_pretrain and (tool in tools_pretrain_models):
-        # if True:
-          config["references"][ref][tool]["model_dir"] = config["references"][ref]["pretrain_models"]
-          # if tool.startswith("scPred_"):
-          #   config["references"][ref]["scPred"]["gene_selection"] = "complete"
-          # else:
-          config["references"][ref][tool]["gene_selection"] = "complete"
-        #if don't the input is the one set by the pipeline and the gene_selection is the one specified by the user
-        else:
-          config["references"][ref][tool]["model_dir"] = config['output_dir'] + "/model/" + ref
-          if tool.startswith("scPred_"):
-            config["references"][ref][tool]["gene_selection"] = config["scPred"]["gene_selection"]
+          config["references"][ref][tool] = {}
+          if use_pretrain and (tool in tools_pretrain_models):
+              # If using pretrained models, set the model directory and complete gene selection
+              config["references"][ref][tool]["model_dir"] = pretrain_models_path
+              config["references"][ref][tool]["gene_selection"] = "complete"
           else:
-            config["references"][ref][tool]["gene_selection"] = config[tool]["gene_selection"]
-      
+              # Otherwise, use the output directory and user-defined gene selection
+              config["references"][ref][tool]["model_dir"] = os.path.join(config['output_dir'], "model", ref)
+              if tool.startswith("scPred_"):
+                  config["references"][ref][tool]["gene_selection"] = config.get("scPred", {}).get("gene_selection", "default")
+              else:
+                  config["references"][ref][tool]["gene_selection"] = config.get(tool, {}).get("gene_selection", "default")
+
 # set parameters related to batch 
 def set_reference_batch_parameters(config):
   for ref in config['references'].keys():
