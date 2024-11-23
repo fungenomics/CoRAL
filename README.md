@@ -181,7 +181,7 @@ See: [Example Config](example.config.yml)
 
 To run the snakemake pipeline on a HPC a submission script needs to be prepared 
 
-See: [Example Bash Script](example.submit.sh)
+See: [Example Bash Script](examples/example.submit.sh)
 
 ```bash 
 #!/bin/sh
