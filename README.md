@@ -175,13 +175,13 @@ benchmark:
 
 See: [Changing Default Parameters](##changing-default-parameters)   
 See: [Detailed description of Config File](##detailed-description-of-config-file)    
-See: [Example Config](example.config.yml)
+See: [Example Config](Examples)
 
 ### 5. Prepare HPC submission script
 
 To run the snakemake pipeline on a HPC a submission script needs to be prepared 
 
-See: [Example Bash Script](examples/example.submit.sh)
+See: [Example Bash Script](Examples/example.submit.sh)
 
 ```bash 
 #!/bin/sh
