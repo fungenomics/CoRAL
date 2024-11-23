@@ -93,7 +93,7 @@ See: Detailed description of Config File
 
 ```yaml
 # mode
-mode: "annotation"
+mode: "annotate"
 
 # target directory 
 output_dir: <output directory for the annotation workflow>
@@ -185,8 +185,8 @@ See: [Example Bash Script](example.submit.sh)
 
 ```bash 
 #!/bin/sh
-#SBATCH --job-name=scCoAnnotate
-#SBATCH --account=rrg-kleinman 
+#SBATCH --job-name=CoRAL
+#SBATCH --account= 
 #SBATCH --output=logs/%x.out
 #SBATCH --error=logs/%x.err
 #SBATCH --ntasks=1
@@ -194,25 +194,30 @@ See: [Example Bash Script](example.submit.sh)
 #SBATCH --time=24:00:00
 #SBATCH --mem-per-cpu=60GB 
 
-module load scCoAnnotate/2.0
+# apptainer image
+image=<path to apptainer immage>
 
-# path to snakefile and config 
-snakefile=<path to snakefile>
-config=<path to configfile>
+# snakefile 
+snakefile=<path to snakefile.master>
 
-# unlock directory incase of previous errors
-snakemake -s ${snakefile} --configfile ${config} --unlock 
+# config 
+config=<path to config file>
 
-# run workflow 
-snakemake -s ${snakefile} --configfile ${config} --cores 5
+# unlock directory in case of previous errors
+apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${snakefile} --unlock 
+
+# run CoRAL  
+apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${config}  --cores 5
 ```
-Depending on if you want to run the annotation workflow or the benchmarking workflow the snakefile needs to be path to either [snakefile.annotate](snakefile.annotate) or [snakefile.benchmark](snakefile.benchmark) 
 
 **OBS!!** Make sure that the number of cores requested match the number of cores in the snakemake command for optimal use of resources
 
 ## Detailed Description of Config File 
 
-```yaml 
+```yaml
+# mode (ex: "annotate", "benchmark" or "train")
+mode: <workflow mode>
+
 # target directory 
 output_dir: <output directory for the annotation workflow>
 
@@ -306,7 +311,10 @@ scHPL:
 
 Create a corresponding section in your config and change the threshold value to 0.25: 
 
-```yaml 
+```yaml
+# mode
+mode: "train"
+
 # target directory 
 output_dir: <output directory for the annotation workflow>
 
@@ -316,40 +324,11 @@ references:
             experssion: <path counts>
             labels: <path labels>
             output_dir_benchmark: <path benchmarking folder>
-            convert_ref_mm_to_hg: False
-            ontology:
-                  ontology_path: <path to ontology.csv>
-                  ontology_column: <ontology_column to use>
-            downsample:
-                  value: 500
-                  stratified: True
-            min_cells_per_cluster: 100
-
-# path to query datasets (cell x gene raw counts)
-query_datasets:
-      <query_name_1>: <path to counts 1>
-      <query_name_2>: <path to counts 2>
-      <query_name_3>: <path to counts 3>
 
 # classifiers to run
 tools_to_run:
       - tool1
       - tool2
-
-# consensus method
-consensus:
-      tools: 
-            - 'all'
-      type:
-            majority:
-                  min_agree: <minimum agreemeent to use>
-            CAWPE:
-                  mode: <CAWPE MODE>
-                  alpha: <alpha value>
-
-# benchmark parameters 
-benchmark:
-      n_folds: <number of folds to use in the benchmarking>
 
 # additional parameters
 scHPL:
@@ -382,7 +361,7 @@ convert_ref_mm_to_hg: False
 
 # :woman_judge: Consensus methods 
 
-scCoAnnotate offers two options for calculating the consensus between tools, Majority Vote and CAWPE (Cross-validation Accuracy Weighted Probabilistic Ensemble). The consensus method is specified in the config: 
+CoRAL offers two options for calculating the consensus between tools, Majority Vote and CAWPE (Cross-validation Accuracy Weighted Probabilistic Ensemble). The consensus method is specified in the config: 
 
 ```
 # consensus method
