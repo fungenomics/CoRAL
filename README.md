@@ -86,9 +86,6 @@ The consensus can be calculated as the majority vote, specifying the minimum of 
 
 At least one consensus type needs to be specified.
 
-See: [Example Config](example.config.yml)
-See: Detailed description of Config File 
-
 **Minimal config file for annotation:** runs both training and mapping 
 
 ```yaml
@@ -122,10 +119,11 @@ consensus:
             - 'all'
       type:
             majority:
-                  min_agree: <minimum agreemeent to use>
+                  # ex: [3], [3, 4, 5]
+                  min_agree: [<minimum agreemeent to use>]
             CAWPE:
-                  #(ex: ['CAWPE_T'], ['CAWPE_T','CAWPE_CT'])
-                  mode: <CAWPE MODE>
+                  # ex: ['CAWPE_T'], ['CAWPE_T','CAWPE_CT']
+                  mode: [<CAWPE mode>]
 ```
 
 **Minimal config file for training:**
@@ -176,6 +174,8 @@ benchmark:
 ```
 
 See: [Changing Default Parameters](##changing-default-parameters)
+See: [Detailed description of Config File ](##detailed-description-of-config-file) 
+See: [Example Config](example.config.yml)
 
 ### 5. Prepare HPC submission script
 
@@ -274,10 +274,12 @@ consensus:
                   # (ex: [2]     [2,3,4])
                   min_agree: <minimum agreemeent to use>
             CAWPE:
-                  #(ex: ['CAWPE_T'], ['CAWPE_T','CAWPE_CT'])
-                  mode: <CAWPE MODE>
-                  #(ex: [4], [2,3,4])
-                  alpha: <alpha value>
+                  # (ex: ['CAWPE_T'], ['CAWPE_T','CAWPE_CT'])
+                  mode: [<CAWPE mode>]
+                  # (ex: [4], [2,3,4])
+                  alpha: [<alpha value>]
+                  # metric used for weighting consensus (ex: 'F1')
+                  accuracy_metric: <metrix>
 
 # benchmark parameters 
 benchmark:
@@ -412,101 +414,30 @@ out/
 
 <!--- ## Output files --->
 
-# :gear: Installation and Dependencies
-
-This tool has been designed and tested for use on a high-performance computing cluster (HPC) with a SLURM workload manager.
-
-It has been tested with [R](https://www.r-project.org/) version 4.2.2 and Python version 3.11.2.
-
-## R packages - CRAN
-
-```R
-pkg = c("Seurat",
-        "tidyverse",
-        "MetBrewer",
-        "plotly",
-        "caret",
-        "Matrix",
-        "scAnnotate",
-        "terra") 
-
-install.packages(pkg)
-```
-
-Older version of Matrix package needs to be installed for Seurat to work: https://github.com/satijalab/seurat/issues/6746
-
-```R
-if (!require("devtools", quietly = TRUE))
-    install.packages("devtools")
-
-devtools::install_version("Matrix", version = "1.5.3", repos = "http://cran.us.r-project.org")
-```
-
-## R packages - Bioconductor
-
-```R
-if (!require("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-
-pkg = c("SingleCellExperiment",
-        "SummarizedExperiment",
-        "ComplexHeatmap",
-        "WGCNA",
-        "SingleR",
-        "scClassify",
-        "scuttle",
-        "scran",
-        "M3Drop",
-        "scAnnotate",
-        "Orthology.eg.db",
-        "org.Mm.eg.db",
-        "org.Hs.eg.db",
-        "scater")
-
-BiocManager::install(pkg)
-```
-
-## R packages - Github
-
-```R
-if (!require("devtools", quietly = TRUE))
-    install.packages("devtools")
-
-pkg = c("pcahan1/singleCellNet",
-        "powellgenomicslab/scPred",
-        "PaulingLiu/scibet",
-        "bm2-lab/scLearn",
-        "BatadaLab/scID")
-
-devtools::install_github(pkg)
-```
-
-## Python modules
-
-```bash 
-pip install numpy pandas scHPL sklearn anndata matplotlib scanpy datetime tensorflow tables celltypist snakemake
-```
-
 # :hammer_and_wrench: Available tools
 
 ## Single cell RNA reference + single cell RNA query
  
 ```yaml
-- scPred
-- SingleR
-- scClassify
-- SciBet
-- singleCellNet
-- scHPL 
-- SVMlinear
-- SVC
-- scLearn
-- ACTINN
-- Correlation
-- scID
-- scAnnotate
-- scNym
-- CellTypist
+      - scPred
+      - SingleR
+      - scClassify
+      - SciBet
+      - singleCellNet
+      - SVMlinear
+      - Correlation
+      - scLearn
+      - ACTINN
+      - scID
+      - scAnnotate
+      - Symphony
+      - scPoli
+      - scANVI
+      - Seurat 
+      - scHPL
+      - scNym
+      - CellBlast
+      - CellTypist
 ```
 
 <!--- # :floppy_disk: Resources  --->
@@ -531,7 +462,7 @@ pip install numpy pandas scHPL sklearn anndata matplotlib scanpy datetime tensor
 - The scripts should take the reference expression/labels and query expression .csv files as specified in [Prepare reference](#2-prepare-reference) and [Prepare query samples](#3-prepare-query-samples)
 - The scripts should take any additional parameters you want to be able to change as input
 
-**5. Update the snakefiles with rules for the new tool (ask Alva if you need help)**
+**5. Update the snakefiles with rules for the new tool**
 
 **6. Update README**
 - Write detailed documentation about the tool in the section: [Detailed documentation on tool wrapper scripts](female-detective-detailed-documentation-on-tool-wrapper-scripts)
