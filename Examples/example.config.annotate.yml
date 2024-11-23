@@ -56,4 +56,4 @@ consensus:
             CAWPE:
                   mode: ['CAWPE_T']
                   alpha: [4]
-                  metric: F1 
+                  accuracy_metric: F1 
