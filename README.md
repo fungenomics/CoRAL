@@ -422,7 +422,7 @@ TODO: describe method
 
 ## Output folder structure 
 
-In each output folder there will be one folder per sample as well as a folder for the models. In each sample folder and in the model folder there will be subfolders for each reference specified in the config file. Each sample folder will also contain a reports folder with a `.html` report with the prediction results. Each refrence folder contains sub folders for the individual tools model and prediction results. 
+In each output folder there will be one folder per sample as well as a folder for the models. In each sample folder and in the model folder there will be subfolders for each reference specified in the config file. Each sample folder will also contain a reports folder with `.html` reports with the mapping results. Each reference folder contains sub folders for the individual tools model and prediction results. 
 
 ```
 out/
