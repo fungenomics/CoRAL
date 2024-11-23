@@ -212,6 +212,33 @@ apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile
 
 **OBS!!** Make sure that the number of cores requested match the number of cores in the snakemake command for optimal use of resources
 
+## How to Add an Ontology 
+
+After mapping the reference labels to a query the lables can be summarized to higher ontology levels. The ontology is specified in the reference section of the config file:
+
+```yaml
+references:
+      <reference_name>:
+            ontology:
+                  # Path to the csv containing the ontology path. Each column represents a different granularity of labels. The columns should be named.
+                  ontology_path: <path to ontology.csv>
+                  # The column name(s) of the granularity to use, from the ontology file.
+                  # This parameter can take multiple column names, therefore they should be put in a list
+                  # (ex: ['level']     ['level1', 'level2'])
+                  ontology_column: <ontology_column to use>
+```
+
+The ontology file needs to be a .csv file where the first column is called **label**. This column needs to have a complete set of the unique labels in the reference data set. Every other column can be named anything and contain any groupings of the labels in the first column. The ontology does not effect the training and mapping, and is just used when computing the final consensus. 
+
+```bash
+label,subclass,class
+celltype1,subclass1,class1
+celltype2,subclass1,class1
+celltype3,subclass2,class1
+celltype4,subclass3,class2
+celltype5,subclass3,class2
+```
+
 ## Detailed Description of Config File 
 
 ```yaml
