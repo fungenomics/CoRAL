@@ -1,15 +1,10 @@
-# scCoAnnotate <img src ="https://user-images.githubusercontent.com/59002771/130340419-3d1eff0b-ecb2-4104-9bf4-1bb968aff433.png" width="50" height="50">
+# CoRAL: Consensus Reference-based Automated Labeling 
 
-Snakemake pipeline for consensus prediction of cell types in single-cell RNA sequencing (scRNA-seq) data. The pipeline allows users to run up to 15 different reference-based annotation tools (statistical models and machine learning approaches) to predict cell type labels of multiple scRNA-seq samples. It then outputs a consensus of the predictions, which has been found to have increased accuracy in benchmarking experiments compared to the individual predictions alone, by combining the strengths of the different approaches.
+Snakemake pipeline for reference mapping. The pipeline allows users to run up to 19 different reference-based annotation methods, representing a diverse set of statistical models and machine learning approaches, to map labels from single cell reference data to the query data. The pipeline outputs the results of each individual method as well as a consensus, which has been found to have increased accuracy in benchmarking experiments compared to the individual predictions alone. 
 
-The pipeline is automated and running it does not require prior knowledge of machine learning. It also features parallelization options to exploit available computational resources for maximal efficiency. This pipeline trains classifiers on genes common to the reference and all query datasets. 
+The pipeline is automated and running it does not require prior knowledge of machine learning or coding in either R or Python. We provide an apptainer image which has all the necessary R and Python packages installed. The pipeline features parallelization options through snakemake, which allows the user to utilize available computational resources on HPC clusters.  
 
-Two different workflows can be run as part of scCoAnnotate. The annotation workflow takes both a references data set and query samples with the aim of annotating the query samples. The benchmarking workflow takes only the reference and preforms a M fold cross validation. 
-
-<img src="https://github.com/fungenomics/scCoAnnotate-dev/blob/dev/scCoAnnotate_workflow.drawio.png" width="600">
-
-See the snakemake rule graph for a more detailed description of the annotation workflow: 
-[Annotation Workflow](rulegraph.annotation.pdf)
+CoRAL can be run in different modes.  The **training mode** takes labeled reference data and outputs models that can be used to map the labels to the query data. The **annotation mode** takes the references data set and query data, and performs training of models and mapping in the query data. If the **training mode** has previously been run the annotation workflow takes the trained models and just the query data. The **cross validation mode** takes the reference and performs a N fold cross validation. The results of the cross validation can be used to weight the consensus in the **annotation mode** by tool performance in that particular reference data set.  
 
 # :running_woman: Quickstart tutorial
 
