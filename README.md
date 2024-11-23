@@ -173,8 +173,8 @@ benchmark:
       n_folds: <number of folds to use in the benchmarking>
 ```
 
-See: [Changing Default Parameters](##changing-default-parameters)
-See: [Detailed description of Config File ](##detailed-description-of-config-file) 
+See: [Changing Default Parameters](##changing-default-parameters)   
+See: [Detailed description of Config File](##detailed-description-of-config-file)    
 See: [Example Config](example.config.yml)
 
 ### 5. Prepare HPC submission script
