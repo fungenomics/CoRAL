@@ -24,6 +24,8 @@ git clone https://github.com/fungenomics/CoRAL.git
 
 Download apptainer 
 
+TO-DO: Add how to download .sif file!! 
+
 ```bash
 
 ```
@@ -239,6 +241,8 @@ celltype4,subclass3,class2
 celltype5,subclass3,class2
 ```
 
+TO-DO: description of how the ontology is computed!! 
+
 ## Detailed Description of Config File 
 
 ```yaml
@@ -378,16 +382,6 @@ extra_config=<path to your new default config file>
 snakemake -s ${snakefile} --configfile ${config} ${extra_config} --cores 5
 ```
 
-### Example of some non-tool specific paramters 
-
-```yaml
-# convert gene symbols in reference from mouse to human 
-convert_ref_mm_to_hg: False
-
-# TODO: add new example
-
-```
-
 # :woman_judge: Consensus methods 
 
 CoRAL offers two options for calculating the consensus between tools, Majority Vote and CAWPE (Cross-validation Accuracy Weighted Probabilistic Ensemble). The consensus method is specified in the config: 
@@ -412,11 +406,11 @@ The pipeline will generate one table and one html report per consensus method.
 
 ## 1. Majority Vote 
 
-TODO: describe method 
+TO-DO: describe method 
 
 ## 2. CAWPE 
 
-TODO: describe method 
+TO-DO: describe method 
 
 # :hatching_chick: Outputs 
 
