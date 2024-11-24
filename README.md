@@ -14,7 +14,7 @@ CoRAL can be run in different modes.  The **training mode** takes labeled refere
 4. [Prepare config file](#4-prepare-config-file)
 5. [Prepare HPC submission script](#5-prepare-hpc-submission-script) 
 
-### 1. Clone repository and install dependencies
+### 1. Clone repository and download apptainer 
 
 Clone git repository in appropriate location:
 
