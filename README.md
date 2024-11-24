@@ -32,7 +32,7 @@ TO-DO: Add how to download .sif file!!
 
 ### 2. Prepare reference
 
-The input format for the references is either a **cell x gene matrix** (.csv) of raw counts and a **cell x label matrix** (.csv), a **Seurat** or a **SingleCellExperiment**    
+The input format for the references is either a **cell x gene matrix** (.csv) of raw counts and a **cell x label matrix** (.csv), a **Seurat** or a **SingleCellExperiment** object.  
 
 Both the **cell x gene matrix** and **cell x label matrix** need the first column to be the cell names in matching order with an empty column name.
 
@@ -75,16 +75,16 @@ The **Seurat** or **SingleCellExperiment** object needs to be saved as .rda or .
 
 ### 4. Prepare config file
 
-For each run a .yml config file needs to be prepared with information about the reference data, query samples and mmethods. 
+For each run a .yml config file needs to be prepared with information about the reference data, query samples and methods. 
 
 Multiple references can be specified with an unique **reference name** and multiple query samples can be specified with an unique **sample name**. 
 
-Full list of available tools can be found here: [Available tools](#hammer-and-wrench-available-tools)   
+Full list of available methods can be found here: [Available tools](#hammer-and-wrench-available-tools)   
 Make sure that the names of the selected tools have the same capitalization and format as this list. 
 
 The tools selected in **consensus** section can either be 'all' (which uses all the tools in **tools_to_run**) or a list of tools to include. 
 
-The consensus can be calculated as the majority vote, specifying the minimum of tool agreement or/and with CAWPE specifying the mode: CAWPE_CT (using the performance of each tool predicting an specific cell-type) or CAWPE_T (performance of each tool). 
+The consensus can be calculated as the majority vote, specifying the minimum of tool agreement or/and with CAWPE specifying the mode: CAWPE_CT (using the performance of each tool predicting an specific cell-type) or CAWPE_T (performance of each tool). CAWPE only works if the benchmarking workflow has been run. 
 
 At least one consensus type needs to be specified.
 
@@ -132,7 +132,7 @@ consensus:
 
 ```yaml
 # mode
-mode: "train"
+mode: "pretrain"
 
 # target directory 
 output_dir: <output directory for the annotation workflow>
@@ -212,7 +212,7 @@ apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile
 apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${config}  --cores 5
 ```
 
-**OBS!!** Make sure that the number of cores requested match the number of cores in the snakemake command for optimal use of resources
+**!!** Make sure that the number of cores requested match the number of cores in the snakemake command for optimal use of resources
 
 ## How to Add an Ontology 
 
@@ -246,7 +246,7 @@ TO-DO: description of how the ontology is computed!!
 ## Detailed Description of Config File 
 
 ```yaml
-# mode (ex: "annotate", "benchmark" or "train")
+# mode (ex: "annotate", "benchmark" or "pretrain")
 mode: <workflow mode>
 
 # target directory 
@@ -346,7 +346,7 @@ Create a corresponding section in your config and change the threshold value to 
 
 ```yaml
 # mode
-mode: "train"
+mode: "pretrain"
 
 # target directory 
 output_dir: <output directory for the annotation workflow>
