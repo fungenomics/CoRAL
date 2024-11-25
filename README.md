@@ -1,6 +1,6 @@
 # CoRAL: Consensus Reference-based Automated Labeling 
 
-Snakemake pipeline for reference mapping. The pipeline allows users to run up to 19 different reference-based annotation methods, representing a diverse set of statistical models and machine learning approaches, to map labels from single cell reference data to the query data. The pipeline outputs the results of each individual method as well as a consensus, which has been found to have increased accuracy in benchmarking experiments compared to the individual predictions alone. 
+Snakemake pipeline for reference mapping. The pipeline allows users to run up to 19 different reference-based annotation methods, representing a diverse set of statistical models and machine learning approaches, to map labels from single cell reference data to the query data. The pipeline outputs the results of each individual method as well as a cell x cell type matrix with a weighted consensus score for each reference cell type in the query. 
 
 The pipeline is automated and running it does not require prior knowledge of machine learning or coding in either R or Python. We provide an apptainer image which has all the necessary dependencies installed. The pipeline features parallelization options through snakemake, which allows the user to utilize available computational resources on HPC clusters.  
 
