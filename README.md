@@ -214,7 +214,7 @@ apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile
 
 **!!** Make sure that the number of cores requested match the number of cores in the snakemake command for optimal use of resources
 
-## How to Set the Feature Space 
+## How to Select the Feature Space 
 
 For each tool the feature space can be set to either 'intersection' or 'complete'. **Intersection** means that the intersect of genes between reference and all query samples in the config file is used for the training and testing. **Compelete** means that the complete fetaure space of the reference is used, and the feature space of the query is modified to match (extra genes removed and missing genes set to 0). For pretraining 'complete' is the default mode. For trainig+annotating the default is 'intersection'. 
 
