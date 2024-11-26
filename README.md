@@ -130,6 +130,8 @@ consensus:
 
 **Minimal config file for training:**
 
+!!! Some tools can not be preptrained: `scAnnotate`, `scID`, `scNym`
+
 ```yaml
 # mode
 mode: "pretrain"
