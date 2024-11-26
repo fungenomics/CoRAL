@@ -214,6 +214,24 @@ apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile
 
 **!!** Make sure that the number of cores requested match the number of cores in the snakemake command for optimal use of resources
 
+## How to Set the Feature Space 
+
+For each tool the feature space can be set to either 'intersection' or 'complete'. **Intersection** means that the intersect of genes between reference and all query samples in the config file is used for the training and testing. **Compelete** means that the complete fetaure space of the reference is used, and the feature space of the query is modified to match (extra genes removed and missing genes set to 0). For pretraining 'complete' is the default mode. For trainig+annotating the default is 'intersection'. 
+
+The feature space is specified for each method in the following way:
+
+```yaml
+SVMlinear:
+  gene_selection: "intersection"
+```
+
+or
+
+```yaml
+SVMlinear:
+  gene_selection: "complete"
+```
+
 ## How to Add an Ontology 
 
 After mapping the reference labels to a query the lables can be summarized to higher ontology levels. The ontology is specified in the reference section of the config file:
