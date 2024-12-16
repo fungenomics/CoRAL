@@ -178,6 +178,15 @@ tools_to_run:
 
 benchmark:
       n_folds: <number of folds to use in the benchmarking>
+
+# consensus method
+consensus:
+      tools: 
+            - 'all'
+      type:
+            majority:
+                  # ex: [3], [3, 4, 5]
+                  min_agree: [<minimum agreemeent to use>]
 ```
 
 See: [Changing Default Parameters](##changing-default-parameters)   
