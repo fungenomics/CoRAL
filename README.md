@@ -8,6 +8,87 @@ CoRAL can be run in different modes.  The **training mode** takes labeled refere
 
 # :orange_book: Tutorial 
 
+This is a tutorial for the three CoRAL workflows using a small toy data set! To start create a folder to run the tutorial in and `cd` into it 
+
+```bash
+mkdir CoRAL_tutorial
+cd CoRAL_tutorial
+```
+
+## Set up 
+
+**1. Clone git repository**
+   
+```bash
+git clone https://github.com/fungenomics/CoRAL.git
+```
+
+You should now have a fodler called `CoRAL` which contains all the code from the git repository 
+
+**2. Download apptainer image and test data set**
+
+Download and unzip the apptainer image (this could take ~10minutes to download) 
+
+```bash
+curl -L -o CoRAL.sif "https://www.dropbox.com/scl/fi/xyx3d1hbpqssjqaboqdqw/CoRAL.sif?rlkey=l56av1fb2ccd7p721rez3j4u6&st=cp7f1ec8&dl=0"
+```
+
+You should now have a `.sif` file called `CoRAL.sif`. This is the apptainer immage that contains everything needed to run CoRAL! 
+
+Download and unzip small data set 
+```bash
+curl -L -o ToyData.zip "https://www.dropbox.com/scl/fo/bjuwdkbnu80dq697k075k/ANHb3rB3FGwVmEot55HK4SI?rlkey=sovugor26l3k50zcopo4j4bcm&st=kzy07rhk&dl=0"
+unzip ToyData.zip
+```
+
+You should now have 4 folders called `Reference`, `Query` `ConfigFiles` and `Scripts`, that contains data and files used in this tutorial 
+
+**3. Check if you have apptainer installed**
+
+```bash
+apptainer --version
+```
+
+If you are on a HPC cluster you can check id apptainer is available as a module 
+
+```bash
+module spider apptainer 
+```
+
+If you don't have apptainer installed follow the instructions here to install:
+
+https://apptainer.org/docs/admin/main/installation.html 
+
+**4. You should now have everything needed to run the tutorial** 
+
+- Cloned `CoRAL` git repository with all the code 
+- `CoRAL.sif` file (apptainer image)
+- `Reference`, `Query`, `ConfigFiles` and `Scripts` folders
+- Apptainer installed
+
+Make sure you have everything by running `ls`
+
+At this point you should have the following things in `CoRAL_tutorial`
+
+```bash
+CoRAL
+CoRAL.sif
+ConfigFiles
+Query
+Reference
+Scripts
+```
+
+## Run the benchmarking workflow 
+
+**1. Set up the config file** 
+
+The first thing you need to do is check the config file for the benchmarking workflow
+
+```bash
+cat ConfigFiles/benchmarking.yml
+```
+
 
 # :running_woman: Quickstart
 
