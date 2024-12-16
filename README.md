@@ -27,7 +27,7 @@ You should now have a fodler called `CoRAL` which contains all the code from the
 
 **2. Download apptainer image and test data set**
 
-Download and unzip the apptainer image (this could take ~10minutes to download) 
+Download the apptainer image (this could take ~10minutes to download) 
 
 ```bash
 curl -L -o CoRAL.sif "https://www.dropbox.com/scl/fi/xyx3d1hbpqssjqaboqdqw/CoRAL.sif?rlkey=l56av1fb2ccd7p721rez3j4u6&st=cp7f1ec8&dl=0"
@@ -117,6 +117,110 @@ tools_to_run:
       - Symphony
 ```
 
+How many folds to run in the crossvalidation 
+```bash
+# benchmark parameters 
+benchmark:
+  n_folds: 5
+```
+
+And how to compute the consensus 
+```bash
+# consensus prameters 
+consensus:
+      tools:
+            - 'all'
+      type:
+            majority:
+                 min_agree: [2]
+```
+
+The config file is already filled out with the correct paths for this tutorial so nothing else to do!
+
+**2. Set up run script**
+
+Check the run script file for the benchmarking workflow
+
+```bash
+cat Scripts/run_benchmarking.sh
+```
+
+The script first sets up the paths to the config file, apptainer image and snake file. If you've set up the tutorial folder correctly you don't have to change anything here, except if you are running on a HPC you need to edit the SLURM (or other schedular) parameters at the top.  
+
+```bash
+# path to snakefile, config and apptainer image 
+snakefile=${PWD}/"CoRAL/snakefile.master"
+config=${PWD}/"ConfigFiles/benchmark.yml"
+image=${PWD}/"CoRAL.sif"
+```
+
+Second the script runs the snakemake pipeline using the apptainer image 
+
+```bash
+# run benchmarking workflow 
+apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -n -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
+```
+
+The `-n` flag here specifies that you want to do a `dry run`. This means that the pipeline will tell you which jobs it is going to run without actually running anything. You should always do this before running to make sure that all of your files are in order and that there are no errors. 
+
+Execute a dry run:
+
+```bash
+./Scripts/run_benchmark.sh
+```
+
+This should print the following, wich tells you that the pipeline will split the data into 5 folds and then run testing and training 5 times for each method selected! 
+Make sure that the number of folds and the methods match your config file! 
+
+```bash
+Job stats:
+job                    count
+-------------------  -------
+all                        1
+benchmark_all              1
+consensus                  5
+knit_report                1
+predict_Correlation        5
+predict_SciBet             5
+predict_SingleR            5
+predict_Symphony           5
+predict_scClassify         5
+subset_folds               1
+train_Correlation          5
+train_SciBet               5
+train_SingleR              5
+train_Symphony             5
+train_scClassify           5
+total                     59
+```
+
+**3. Run the workflow** 
+
+Now that you've made sure that the dryrun works you are ready to run the benchmarkig workflow! Remove the `-n` flag from your script: 
+
+```bash
+# run benchmarking workflow 
+apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
+```
+
+Run script in command line 
+```bash
+./Scripts/run_benchmark.sh
+```
+
+or submitt as a job 
+```bash
+sbatch ./Scripts/run_benchmark.sh
+```
+
+**4. Monitor job** 
+
+Check pipleine progress in the logs:
+
+```bash
+cat logs/CoRAL.benchmark.err
+```
+
 # :running_woman: Quickstart
 
 1. [Clone repository and install dependencies](#1-clone-repository-and-install-dependencies)  
@@ -133,12 +237,10 @@ Clone git repository in appropriate location:
 git clone https://github.com/fungenomics/CoRAL.git
 ```
 
-Download apptainer 
-
-TO-DO: Add how to download .sif file!! 
+Download apptainer image 
 
 ```bash
-
+curl -L -o CoRAL.sif "https://www.dropbox.com/scl/fi/xyx3d1hbpqssjqaboqdqw/CoRAL.sif?rlkey=l56av1fb2ccd7p721rez3j4u6&st=cp7f1ec8&dl=0"
 ```
 
 ### 2. Prepare reference
