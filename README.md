@@ -89,6 +89,33 @@ The first thing you need to do is check the config file for the benchmarking wor
 cat ConfigFiles/benchmarking.yml
 ```
 
+The confign file specifies which workflow to run
+```bash
+# workflow to run 
+mode: 'benchmark'
+```
+
+Where the reference data set files are stored and where to write the output 
+```bash
+# path to reference to train classifiers on (cell x gene raw counts)
+references:
+   test_reference:
+      expression: Reference/expression.csv
+      labels: Reference/labels.csv
+      output_dir_benchmark: Out/Benchmark/
+```
+
+Which methods to run. In this tutorial we start by running 5 methods (SingleR, scClassify, SciBet, Correlation and Symphony), but there are many more available in the pipeline
+
+```bash
+# methods to run
+tools_to_run:
+      - SingleR
+      - scClassify
+      - SciBet
+      - Correlation
+      - Symphony
+```
 
 # :running_woman: Quickstart
 
