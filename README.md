@@ -6,7 +6,10 @@ The pipeline is automated and running it does not require prior knowledge of mac
 
 CoRAL can be run in different modes.  The **training mode** takes labeled reference data and outputs models that can be used to map the labels to the query data. The **annotation mode** takes the references data set and query data, and performs training of models and mapping in the query data. If the **training mode** has previously been run the annotation workflow takes the trained models and just the query data. The **cross validation mode** takes the reference and performs a N fold cross validation. The results of the cross validation can be used to weight the consensus in the **annotation mode** by tool performance in that particular reference data set.  
 
-# :running_woman: Quickstart tutorial
+# :orange_book: Tutorial 
+
+
+# :running_woman: Quickstart
 
 1. [Clone repository and install dependencies](#1-clone-repository-and-install-dependencies)  
 2. [Prepare reference](#2-prepare-reference)
