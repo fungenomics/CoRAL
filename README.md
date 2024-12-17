@@ -296,7 +296,7 @@ config=${PWD}/ConfigFiles/train.yml
 
 Before running the pipeline perform a dry run with the `-n` flag like before
 ```bash
-./Scripts/run_benchmark.sh
+./Scripts/run_train.sh
 ```
 
 The output of the dry run should look like this. The pipeline will run one training step per method specified in the config. 
@@ -514,10 +514,11 @@ The most important files outputed by the pipeline is:
   Use your own data!! :) 
 </details>
 
-
 ## Tutorial Over!! 
 
 Good job! For more information about each pipline, snakemake, parameters and other things see the rest of this documentation. 
+
+
 
 # :running_woman: Quickstart
 
