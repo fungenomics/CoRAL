@@ -90,12 +90,14 @@ cat ConfigFiles/benchmarking.yml
 ```
 
 The confign file specifies which workflow to run
+
 ```bash
 # workflow to run 
 mode: 'benchmark'
 ```
 
 Where the reference data set files are stored and where to write the output 
+
 ```bash
 # path to reference to train classifiers on (cell x gene raw counts)
 references:
@@ -118,6 +120,7 @@ tools_to_run:
 ```
 
 How many folds to run in the crossvalidation 
+
 ```bash
 # benchmark parameters 
 benchmark:
@@ -125,6 +128,7 @@ benchmark:
 ```
 
 And how to compute the consensus 
+
 ```bash
 # consensus prameters 
 consensus:
@@ -231,8 +235,8 @@ When the pipeline is done it should print `59 of 59 steps (100%) done` in the lo
 **5. Check output files** 
 
 The most important files outputed by the workflow is: 
-- The `.html` report generated as the final step in the workflow. This report contains plots and information about the crossvalidation.
-- The 
+- The `.html` report generated as the final step in the workflow in `Out/Benchmark/test_reference/report/`. This report contains plots and information about the crossvalidation.
+- The perfomance metrics found in `Out/Benchmark/test_reference/report/metrics_label.csv`. This file has F1, precission and recall for each method and class in the reference data. 
 
 
 ## Run the training workflow 
@@ -321,8 +325,15 @@ When the pipeline is done it should print `8 of 8 steps (100%) done` in the log 
 
 **5. Check output files** 
 
-The most important files outputed by the workflow is: 
+The most important files outputed by the workflow is the model files for each method. These are the models used in the annotation workflow 
 
+```bash
+Out/Train/model/test_reference/Correlation/Correlation_model.Rda
+Out/Train/model/test_reference/SciBet/SciBet_model.Rda
+Out/Train/model/test_reference/SingleR/SingleR_model.Rda
+Out/Train/model/test_reference/Symphony/Symphony_model.Rda
+Out/Train/model/test_reference/scClassify/scClassify_model.Rda
+```
 
 ## Run the annotation workflow 
 
@@ -457,6 +468,12 @@ When the pipeline is done it should print `25 of 25 steps (100%) done` in the lo
 **5. Check output files** 
 
 The most important files outputed by the workflow is: 
+- The html reports for each sample and reference found in the reports folder: `Out/Annotate/ct_p6/report/`
+- The `.csv` files with all the prediction results from the individual methods and the consensus:
+  `Out/Annotate/ct_p6/test_reference/majority/Prediction_Summary_label.tsv`
+  `Out/Annotate/ct_p6/test_reference/CAWPE/Prediction_Summary_label.tsv`
+- The `.csv` file with the CAWPE scores: `Out/Annotate/ct_p6/test_reference/CAWPE/CAWPE_T_4_label_scores.csv`
+
 
 # :running_woman: Quickstart
 
