@@ -8,7 +8,9 @@ CoRAL can be run in different modes.  The **training mode** takes labeled refere
 
 # :orange_book: Tutorial 
 
-This is a tutorial for the three CoRAL workflows using a small toy data set! To start create a folder to run the tutorial in and `cd` into it 
+This is a tutorial for the three CoRAL workflows using a small toy data set! The tutorial uses a small reference and query data set from the developing mouse brain. 
+
+To start create a folder to run the tutorial in and `cd` into it 
 
 ```bash
 mkdir CoRAL_tutorial
