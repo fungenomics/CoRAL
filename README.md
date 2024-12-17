@@ -182,11 +182,6 @@ This should print the following information, which tells you that the pipeline w
 
 Make sure that the number of folds and the methods match your config file! 
 
-<details>
-  <summary>Exercise</summary>
-  Change the number of folds or remove a method from the config file. How does the dryrun output change?
-</details>
-
 ```bash
 
 job                    count
@@ -209,6 +204,11 @@ train_scClassify           5
 total                     59
 
 ```
+
+<details>
+  <summary>Exercise</summary>
+  Change the number of folds or remove a method from the config file. How does the dryrun output change?
+</details>
 
 **3. Run the pipeline** 
 
