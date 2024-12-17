@@ -219,13 +219,6 @@ Now that you've made sure that the dry run works you are ready to run the benchm
 apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
 ```
 
-Another important flag is `--cores`. This parameter lets you parallelize the pipeline. If you add `--cores 5`, 5 steps will be run in paralell instead of 1. Make sure the number of cores match the slurm (or other scheduler) parameters in your run script if you are submitting the job for optimal use of resources. 
-
-<details>
-  <summary>Exercise</summary>
-  Change the number of cores from 1 to 5. The pipeline should finish 5 times as fast!!
-</details>
-
 Now you're ready to run the benchmarking pipeline! 
 
 Run script in command line
@@ -237,6 +230,13 @@ or submitt as a job
 ```bash
 sbatch ./Scripts/run_benchmark.sh
 ```
+
+Another important flag is `--cores`. This parameter lets you parallelize the pipeline. If you add `--cores 5`, 5 steps will be run in paralell instead of 1. Make sure the number of cores match the slurm (or other scheduler) parameters in your run script if you are submitting the job for optimal use of resources. 
+
+<details>
+  <summary>Exercise</summary>
+  Change the number of cores from 1 to 5. The pipeline should finish 5 times as fast!!
+</details>
 
 **4. Monitor pipeline** 
 
