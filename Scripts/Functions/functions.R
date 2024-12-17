@@ -52,57 +52,61 @@ get_data_reference <- function(ref_path,
     #read labels   
     lab = data.table::fread(lab_path, header = T) %>% column_to_rownames('V1')  
 
-  } else if(ref_ext %in% c('rda','rdata','rds')){ #If the rda rdata rds it assumes that the label is a vector of column name
+  } 
+  else if(ref_ext %in% c('rda','rdata','rds')){ #If the rda rdata rds it assumes that the label is a vector of column name
     
     if(ref_ext %in% c('rda','rdata')){
       sce <- loadRDa(ref_path)
     } else if(ref_ext %in% c('rds')){
       sce <- readRDS(ref_path)
     }
-
-    if(substr(SeuratObject::Version(sce), 1, 1) %in% c('4', '3')){
-
-      print('@ Object is Seurat v3 or v4')
-
-      mtx <- sce@assays$RNA@counts %>% as.matrix %>% t() %>% as.data.frame()
+    #Chek if is a SingleCellExperiment object
+    if(class(sce) %in% c('SingleCellExperiment','LoomCellExperiment')){
       
-      lab <- data.frame(row.names = colnames(sce),
-                        label = as.character(sce@meta.data[,lab_path,drop=T]))
-      
-      if(!is.null(batch_path)){
-        lab$batch <- as.character(sce@meta.data[,batch_path,drop=T])
-      }
-      
-    } else if(substr(SeuratObject::Version(sce), 1, 1) %in% c('5')) {
-
-      print('@ Object is Seurat v5')
-
-      mtx <- sce@assays$RNA@layers$counts %>% as.matrix %>% t() %>% as.data.frame()
-      
-      lab <- data.frame(row.names = colnames(sce),
-                        label = as.character(sce@meta.data[,lab_path,drop=T]))
-      
-      if(!is.null(batch_path)){
-        lab$batch <- as.character(sce@meta.data[,batch_path,drop=T])
-      }
-
-    }else if(class(sce) %in% c('SingleCellExperiment','LoomCellExperiment')){
-
       print('@ Objects is SingleCellExperiment or LoomCellExperiment')
-
+      
       mtx <- assay(sce,'counts') %>% as.matrix() %>% t() %>% as.data.frame()
       lab <- data.frame(row.names = colnames(sce),
                         label = as.character(colData(sce)[,lab_path,drop=T]))
       
       if(!is.null(batch_path)){
         lab$batch <- as.character(colData(sce)[,batch_path,drop=T])
+      }
     }
-      
-    } else{
+    #Chek if is a Seurat object
+    else if(class(sce) %in% c('Seurat')){
+      if(substr(SeuratObject::Version(sce), 1, 1) %in% c('4', '3')){
+        
+        print('@ Object is Seurat v3 or v4')
+        
+        mtx <- sce@assays$RNA@counts %>% as.matrix %>% t() %>% as.data.frame()
+        
+        lab <- data.frame(row.names = colnames(sce),
+                          label = as.character(sce@meta.data[,lab_path,drop=T]))
+        
+        if(!is.null(batch_path)){
+          lab$batch <- as.character(sce@meta.data[,batch_path,drop=T])
+        }
+        
+      } else if(substr(SeuratObject::Version(sce), 1, 1) %in% c('5')) {
+        
+        print('@ Object is Seurat v5')
+        
+        mtx <- sce@assays$RNA@layers$counts %>% as.matrix %>% t() %>% as.data.frame()
+        
+        lab <- data.frame(row.names = colnames(sce),
+                          label = as.character(sce@meta.data[,lab_path,drop=T]))
+        
+        if(!is.null(batch_path)){
+          lab$batch <- as.character(sce@meta.data[,batch_path,drop=T])
+        }
+      }
+    }
+    else{
       stop("@ Object is not Seurat (v3/v4/v5) nor SingleCellExperiment")
     }
-
-  } else{
+  } 
+  else{
     stop('@ Formats provided are not compatible. Acceptable formats are .csv, Seurat (v3, v4, v5) object, SingleCellExperiment object (.rds,.rdata)')
   }
 
@@ -117,32 +121,40 @@ get_data_query <- function(query_path){
   if(query_ext == 'csv'){ #If the expression is csv it assumes that the labels is csv
     # read reference 
     mtx = data.table::fread(query_path, header = T) %>% column_to_rownames('V1')
-  } else if(query_ext %in% c('rda','rdata','rds')){ #If the rda rdata rds it assumes that the label is a vector of column name
+  } 
+  else if(query_ext %in% c('rda','rdata','rds')){ #If the rda rdata rds it assumes that the label is a vector of column name
     if(query_ext %in% c('rda','rdata')){
       sce <- loadRDa(query_path)
     } else if(query_ext %in% c('rds')){
       sce <- readRDS(query_path)
     }
-    if(substr(SeuratObject::Version(sce), 1, 1) %in% c('4', '3')){
-      
-      print('@ Object is Seurat v3 or v4')
-
-      mtx <- sce@assays$RNA@counts %>% as.matrix %>% t %>% as.data.frame()
-
-    } else if(substr(SeuratObject::Version(sce), 1, 1) %in% c('5')) {
-
-      print('@ Object is Seurat v5')
-
-      mtx <- sce@assays$RNA@layers$counts %>% as.matrix %>% t() %>% as.data.frame()
-    
-    } else if(class(sce) %in% c('SingleCellExperiment','LoomCellExperiment')){
-
+    #Check if the object is a SingleCellExperiment
+    if(class(sce) %in% c('SingleCellExperiment','LoomCellExperiment')){
       mtx <- assay(sce,'counts') %>% as.matrix() %>% t() %>% as.data.frame()
-
-    } else{
+    }
+    #Check if is a SeuratObject
+    else if(class(sce) %in% c('Seurat')){
+      #Check if is a Seurat v3 or v4
+      if(substr(SeuratObject::Version(sce), 1, 1) %in% c('4', '3')){
+        
+        print('@ Object is Seurat v3 or v4')
+        
+        mtx <- sce@assays$RNA@counts %>% as.matrix %>% t %>% as.data.frame()
+        
+      }
+      #Check if is a Seurat v5
+      else if(substr(SeuratObject::Version(sce), 1, 1) %in% c('5')) {
+        print('@ Object is Seurat v5')
+        
+        mtx <- sce@assays$RNA@layers$counts %>% as.matrix %>% t() %>% as.data.frame()
+        
+      }  
+    }
+     else{
       stop("@ Object is not Seurat (v3/v4/v5) nor SingleCellExperiment")
     }
-  } else{
+  } 
+  else{
     stop('@ Formats provided are not compatible. Acceptable formats are .csv, Seurat object, SingleCellExperiment object (.rds,.rdata)')
   }
   return(mtx)
@@ -578,26 +590,42 @@ umap_plotly = function(seurat, meta_column, pal){
   return(p2)
 }
 
-plot_heatmap_CAWPE <- function(CAWPE_matrix){
+plot_heatmap_CAWPE <- function(seurat,
+                               CAWPE_matrix,
+                               pal = cluster_pal){
+  # Order the CAWPE_matrix in the same order as the seurat, to be able to add the colors according to the seurat clsuters
+  CAWPE_matrix <- CAWPE_matrix[colnames(seurat),]
   entropy <- CAWPE_matrix[,1]
   CAWPE_matrix <- CAWPE_matrix[,-1]
   col_fun = circlize::colorRamp2(c(1, 0.5, 0), 
                                  c("#5C80BC", "#F2EFC7", "#FF595E")
-                                 )
+  )
   
   hr <- rowAnnotation(Entropy = entropy,
                       col = list(Entropy = col_fun)
-                      )
+  )
+  hl <- rowAnnotation(Seurat_clusters = seurat$seurat_clusters,
+                      col = list(Seurat_clusters = pal)
+  )
   clust.row <- F
+  clust.row_slices <- F
   if(nrow(CAWPE_matrix) < 60000){
     clust.row <- T  
+    clust.row_slices <- T
   }
+  
   h <- Heatmap(CAWPE_matrix,
-          show_row_names = F,
-          right_annotation = hr,
-          col = col_fun,
-          cluster_rows = clust.row,
-          name = "CAWPE score")
+               show_row_names = F,
+               right_annotation = hr,
+               left_annotation = hl,
+               col = col_fun,
+               cluster_rows = clust.row,
+               cluster_row_slices = clust.row_slices,
+               show_row_dend = F,
+               border = F,
+               row_gap = unit(0, "mm"),
+               row_split = seurat$seurat_clusters,
+               name = "CAWPE score")
   return(h)
 }
 #----- PLOTS FOR NOTEBOOK BENCHMARK ------------------------------------
