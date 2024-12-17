@@ -235,7 +235,7 @@ Another important flag is `--cores`. This parameter lets you parallelize the pip
 
 <details>
   <summary>Exercise</summary>
-  Change the number of cores from 1 to 5. The pipeline should finish 5 times as fast!!
+  Change the number of cores from 1 to 5 in the snakemake command and the slurm header. The pipeline should finish 5 times as fast!!
 </details>
 
 **4. Monitor pipeline** 
