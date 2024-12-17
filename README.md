@@ -8,7 +8,7 @@ CoRAL can be run in different modes.  The **training mode** takes labeled refere
 
 # :orange_book: Tutorial 
 
-This is a tutorial for the three CoRAL workflows using a small toy data set! The tutorial uses a small reference and query data set from the developing mouse brain. 
+This is a tutorial for the three sub-workflows included in CoRAL. The tutorial uses a small reference and query data set from the developing mouse brain. For more detailed descriptions of input formats and parameters see the subsequent sections! 
 
 To start create a folder to run the tutorial in and `cd` into it 
 
