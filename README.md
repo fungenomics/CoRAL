@@ -152,7 +152,7 @@ Check the run script file for the benchmarking pipeline
 cat Scripts/run_benchmarking.sh
 ```
 
-If you've set up the tutorial folder correctly you don't have to change anything here, except if you are running on a HPC. Then you need to edit the SLURM (or other scheduler) parameters at the top of the file 
+If you've set up the tutorial folder correctly you don't have to change anything here, except if you are running on a HPC. Then you need to edit the slurm (or other scheduler) parameters at the top of the file 
 
 The script first sets up the paths to the config file, apptainer image and snake file 
 
