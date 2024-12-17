@@ -135,7 +135,7 @@ consensus:
                  min_agree: [2]
 ```
 
-The config file is already filled out with the correct paths for this tutorial so nothing else to do!
+The config file is already filled out but you do need to update the paths to be the full paths to the files! You can find the full path to your folder by running `realpath` in the command line. 
 
 **2. Set up run script**
 
@@ -145,7 +145,7 @@ Check the run script file for the benchmarking workflow
 cat Scripts/run_benchmarking.sh
 ```
 
-The script first sets up the paths to the config file, apptainer image and snake file. If you've set up the tutorial folder correctly you don't have to change anything here, except if you are running on a HPC you need to edit the SLURM (or other schedular) parameters at the top.  
+The script first sets up the paths to the config file, apptainer image and snake file. If you've set up the tutorial folder correctly you don't have to change anything here, except if you are running on a HPC you need to edit the SLURM (or other scheduler) parameters at the top.  
 
 ```bash
 # path to snakefile, config and apptainer image 
@@ -204,7 +204,11 @@ Now that you've made sure that the dryrun works you are ready to run the benchma
 apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
 ```
 
-Run script in command line 
+Another important flag is `--cores`. This parameter lets you parallelize the workflow. If you `--cores 5`, 5 steps will be run in paralell instead of 1. Make sure the number of cores match the SLURM (or other scheduler) parameters in your run script if you are submitting the job for optimal use of resources. 
+
+Now you're ready to run the benchmarking workflow! 
+
+Run script in command line
 ```bash
 ./Scripts/run_benchmark.sh
 ```
@@ -222,7 +226,7 @@ Check pipleine progress in the logs:
 cat logs/CoRAL.benchmark.err
 ```
 
-When the pipeline is done 
+When the pipeline is done it should print `59 of 59 steps (100%) done` in the log file! 
 
 **5. Check output files** 
 
@@ -241,7 +245,7 @@ Now that you have run the benchmarking workflow you can run the training workflo
 cat ConfigFiles/train.yml
 ```
 
-The only thing that is different is the `mode` and that you need to add a parameter for the output directory: `output_dir`
+The only thing that is different is the `mode` and that you need to add a parameter for the output directory: `output_dir`. Make sure to update all the paths to the full paths!
 
 ```bash
 # workflow to run 
@@ -269,6 +273,7 @@ Before running the workflow perform a dryrun with the `-n` flag like before
 ```
 
 The output of the dry run should look like this. The pipeline will run one training step per method specified in the config. 
+
 ```bash
 
 job                  count
@@ -293,11 +298,13 @@ apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile
 ```
 
 Run script in command line 
+
 ```bash
 ./Scripts/run_train.sh
 ```
 
 or submitt as a job 
+
 ```bash
 sbatch ./Scripts/run_train.sh
 ```
@@ -310,16 +317,14 @@ Check pipleine progress in the logs:
 cat logs/CoRAL.train.err
 ```
 
-When the pipeline is done 
+When the pipeline is done it should print `8 of 8 steps (100%) done` in the log file! 
 
 **5. Check output files** 
 
 The most important files outputed by the workflow is: 
-- The `.html` report generated as the final step in the workflow. This report contains plots and information about the crossvalidation.
-- The 
+
 
 ## Run the annotation workflow 
-
 
 **1. Set up the config file** 
 
@@ -361,6 +366,8 @@ query_datasets:
       ct_p6: Query/ct_p6/expression.csv
 ```
 
+Make sure to update all the paths to the full paths!!!
+
 Finally the consensus section has been updated to include paramters for CAWPE (weighted ensemble voting) and majority vote 
 
 ```bash
@@ -377,10 +384,79 @@ consensus:
                  metric: 'F1'
 ```
 
-# output directory 
-output_dir: Out/Train
+**2. Set up run script**
+
+Check the run script file for the train workflow
+
+```bash
+cat Scripts/run_annotate.sh
 ```
 
+It's exactly the same as the benchmarking but now you specify `annotate.yml` as the config file. 
+
+```bash
+config=${PWD}/ConfigFiles/annotate.yml
+```
+
+Before running the workflow perform a dryrun with the `-n` flag like before
+
+```bash
+./Scripts/run_benchmark.sh
+```
+
+The output of the dry run should look like this. The pipeline will run one prediction step per method and sample specified in the config. 
+
+```bash
+
+job                    count
+-------------------  -------
+all                        1
+annotate_all               1
+consensus                  3
+knit_report                3
+ontology                   1
+predict_Correlation        3
+predict_SciBet             3
+predict_SingleR            3
+predict_Symphony           3
+predict_scClassify         3
+preprocess                 1
+total                     25
+
+```
+
+Now that you've made sure that the dryrun works you are ready to run the annotation workflow! Remove the `-n` flag from your script: 
+
+```bash
+# run benchmarking workflow 
+apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
+```
+
+Run script in command line 
+
+```bash
+./Scripts/run_annotate.sh
+```
+
+or submitt as a job 
+
+```bash
+sbatch ./Scripts/run_annotate.sh
+```
+
+**4. Monitor workflow** 
+
+Check pipleine progress in the logs:
+
+```bash
+cat logs/CoRAL.annotate.err
+```
+
+When the pipeline is done it should print `25 of 25 steps (100%) done` in the log file! 
+
+**5. Check output files** 
+
+The most important files outputed by the workflow is: 
 
 # :running_woman: Quickstart
 
