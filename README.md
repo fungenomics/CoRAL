@@ -441,7 +441,7 @@ config=${PWD}/ConfigFiles/annotate.yml
 Before running the pipeline perform a dry run with the `-n` flag like before
 
 ```bash
-./Scripts/run_benchmark.sh
+./Scripts/run_annotate.sh
 ```
 
 The output of the dry run should look like this. The pipeline will run one prediction step per method and sample specified in the config. 
