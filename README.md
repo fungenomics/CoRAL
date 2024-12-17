@@ -207,19 +207,19 @@ total                     59
 
 <details>
   <summary>Exercise</summary>
-  Change the number of folds or remove a method from the config file. How does the dryrun output change?
+  Change the number of folds or remove a method from the config file. How does the dry run output change?
 </details>
 
 **3. Run the pipeline** 
 
-Now that you've made sure that the dryrun works you are ready to run the benchmarkig pipeline! Remove the `-n` flag from your script: 
+Now that you've made sure that the dry run works you are ready to run the benchmarkig pipeline! Remove the `-n` flag from your script: 
 
 ```bash
 # run benchmarking pipeline 
 apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
 ```
 
-Another important flag is `--cores`. This parameter lets you parallelize the pipeline. If you `--cores 5`, 5 steps will be run in paralell instead of 1. Make sure the number of cores match the SLURM (or other scheduler) parameters in your run script if you are submitting the job for optimal use of resources. 
+Another important flag is `--cores`. This parameter lets you parallelize the pipeline. If you add `--cores 5`, 5 steps will be run in paralell instead of 1. Make sure the number of cores match the slurm (or other scheduler) parameters in your run script if you are submitting the job for optimal use of resources. 
 
 <details>
   <summary>Exercise</summary>
@@ -256,7 +256,7 @@ The most important files outputed by the pipeline is:
 
 <details>
   <summary>Exercise</summary>
-  Find the section in the documentation where all the available methods are listed. Add a few more to your config file and do a dryrun 
+  Find the section in the documentation where all the available methods are listed. Add a few more to your config file and do a dry run 
   again. Does the pipeline try to rerun all the methods or just the new methods? 
 </details>
 
@@ -294,7 +294,7 @@ It's exactly the same as the benchmarking but now you specify `train.yml` as the
 config=${PWD}/ConfigFiles/train.yml
 ```
 
-Before running the pipeline perform a dryrun with the `-n` flag like before
+Before running the pipeline perform a dry run with the `-n` flag like before
 ```bash
 ./Scripts/run_benchmark.sh
 ```
@@ -317,7 +317,7 @@ total                    8
 
 ```
 
-Now that you've made sure that the dryrun works you are ready to run the training pipeline! Remove the `-n` flag from your script: 
+Now that you've made sure that the dry run works you are ready to run the training pipeline! Remove the `-n` flag from your script: 
 
 ```bash
 # run benchmarking pipeline 
@@ -348,7 +348,7 @@ When the pipeline is done it should print `8 of 8 steps (100%) done` in the log 
 
 <details>
   <summary>Exercise</summary>
-  Find the section in the documentation where all the available methods are listed. Add a few more to your config file and do a dryrun 
+  Find the section in the documentation where all the available methods are listed. Add a few more to your config file and do a dry run 
   again. Does the pipeline try to rerun all the methods or just the new methods? 
 </details>
 
@@ -438,7 +438,7 @@ It's exactly the same as the benchmarking but now you specify `annotate.yml` as 
 config=${PWD}/ConfigFiles/annotate.yml
 ```
 
-Before running the pipeline perform a dryrun with the `-n` flag like before
+Before running the pipeline perform a dry run with the `-n` flag like before
 
 ```bash
 ./Scripts/run_benchmark.sh
@@ -471,7 +471,7 @@ total                     25
    run to find out!!
 </details>
 
-Now that you've made sure that the dryrun works you are ready to run the annotation pipeline! Remove the `-n` flag from your script: 
+Now that you've made sure that the dry run works you are ready to run the annotation pipeline! Remove the `-n` flag from your script: 
 
 ```bash
 # run benchmarking pipeline 
@@ -1041,7 +1041,7 @@ out/
 
 # 🐍 Snakemake Tips and Tricks 
 
-- Dryrun snakemake pipeline before submitting job 
+- dry run snakemake pipeline before submitting job 
 ```bash
 snakemake -s ${snakefile} --configfile ${config} -n
 ```
