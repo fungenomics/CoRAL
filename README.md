@@ -4,7 +4,7 @@ Snakemake pipeline for reference mapping. The pipeline allows users to run up to
 
 The pipeline is automated and running it does not require prior knowledge of machine learning or coding in either R or Python. We provide an apptainer image which has all the necessary dependencies installed. The pipeline features parallelization options through snakemake, which allows the user to utilize available computational resources on HPC clusters.  
 
-CoRAL can be run in different modes.  The **training mode** takes labeled reference data and outputs models that can be used to map the labels to the query data. The **annotation mode** takes the references data set and query data, and performs training of models and mapping in the query data. If the **training mode** has previously been run the annotation workflow takes the trained models and just the query data. The **cross validation mode** takes the reference and performs a N fold cross validation. The results of the cross validation can be used to weight the consensus in the **annotation mode** by tool performance in that particular reference data set.  
+CoRAL can be run in different modes.  The **training mode** takes labeled reference data and outputs models that can be used to map the labels to the query data. The **annotation mode** takes the references data set and query data, and performs training of models and mapping in the query data. If the **training mode** has previously been run the annotation pipeline takes the trained models and just the query data. The **cross validation mode** takes the reference and performs a N fold cross validation. The results of the cross validation can be used to weight the consensus in the **annotation mode** by tool performance in that particular reference data set.  
 
 # :orange_book: Tutorial 
 
@@ -82,20 +82,20 @@ Reference
 Scripts
 ```
 
-## Run the benchmarking workflow 
+## Run the benchmarking pipeline 
 
 **1. Set up the config file** 
 
-The first thing you need to do is check the config file for the benchmarking workflow
+The first thing you need to do is check the config file for the benchmarking pipeline
 
 ```bash
 cat ConfigFiles/benchmarking.yml
 ```
 
-The confign file specifies which workflow to run
+The confign file specifies which pipeline to run
 
 ```bash
-# workflow to run 
+# pipeline to run 
 mode: 'benchmark'
 ```
 
@@ -146,7 +146,7 @@ The config file is already prepared but you do need to update the paths to be th
 
 **2. Set up run script**
 
-Check the run script file for the benchmarking workflow
+Check the run script file for the benchmarking pipeline
 
 ```bash
 cat Scripts/run_benchmarking.sh
@@ -166,7 +166,7 @@ image=${PWD}/"CoRAL.sif"
 Second, the script runs the snakemake pipeline using the apptainer image 
 
 ```bash
-# run benchmarking workflow 
+# run benchmarking pipeline 
 apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -n -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
 ```
 
@@ -210,23 +210,23 @@ total                     59
 
 ```
 
-**3. Run the workflow** 
+**3. Run the pipeline** 
 
-Now that you've made sure that the dryrun works you are ready to run the benchmarkig workflow! Remove the `-n` flag from your script: 
+Now that you've made sure that the dryrun works you are ready to run the benchmarkig pipeline! Remove the `-n` flag from your script: 
 
 ```bash
-# run benchmarking workflow 
+# run benchmarking pipeline 
 apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
 ```
 
-Another important flag is `--cores`. This parameter lets you parallelize the workflow. If you `--cores 5`, 5 steps will be run in paralell instead of 1. Make sure the number of cores match the SLURM (or other scheduler) parameters in your run script if you are submitting the job for optimal use of resources. 
+Another important flag is `--cores`. This parameter lets you parallelize the pipeline. If you `--cores 5`, 5 steps will be run in paralell instead of 1. Make sure the number of cores match the SLURM (or other scheduler) parameters in your run script if you are submitting the job for optimal use of resources. 
 
 <details>
   <summary>Exercise</summary>
   Change the number of cores from 1 to 5. The pipeline should finish 5 times as fast!!
 </details>
 
-Now you're ready to run the benchmarking workflow! 
+Now you're ready to run the benchmarking pipeline! 
 
 Run script in command line
 ```bash
@@ -238,7 +238,7 @@ or submitt as a job
 sbatch ./Scripts/run_benchmark.sh
 ```
 
-**4. Monitor workflow** 
+**4. Monitor pipeline** 
 
 Check pipleine progress in the logs:
 
@@ -250,8 +250,8 @@ When the pipeline is done it should print `59 of 59 steps (100%) done` in the lo
 
 **5. Check output files** 
 
-The most important files outputed by the workflow is: 
-- The `.html` report generated as the final step in the workflow in `Out/Benchmark/test_reference/report/`. This report contains plots and information about the crossvalidation.
+The most important files outputed by the pipeline is: 
+- The `.html` report generated as the final step in the pipeline in `Out/Benchmark/test_reference/report/`. This report contains plots and information about the crossvalidation.
 - The perfomance metrics found in `Out/Benchmark/test_reference/report/metrics_label.csv`. This file has F1, precission and recall for each method and class in the reference data. 
 
 <details>
@@ -260,11 +260,11 @@ The most important files outputed by the workflow is:
   again. Does the pipeline try to rerun all the methods or just the new methods? 
 </details>
 
-## Run the training workflow 
+## Run the training pipeline 
 
 **1. Set up the config file** 
 
-Now that you have run the benchmarking workflow you can run the training workflow. The first thing you need to do is check the config file for the train workflow
+Now that you have run the benchmarking pipeline you can run the training pipeline. The first thing you need to do is check the config file for the train pipeline
 
 ```bash
 cat ConfigFiles/train.yml
@@ -273,7 +273,7 @@ cat ConfigFiles/train.yml
 The only thing that is different is the `mode` and that you need to add a parameter for the output directory: `output_dir`
 
 ```bash
-# workflow to run 
+# pipeline to run 
 mode: 'pretrain'
 
 # output directory 
@@ -284,7 +284,7 @@ Make sure to update all the paths to the full paths!!!
 
 **2. Set up run script**
 
-Check the run script file for the train workflow
+Check the run script file for the train pipeline
 ```bash
 cat Scripts/run_train.sh
 ```
@@ -294,7 +294,7 @@ It's exactly the same as the benchmarking but now you specify `train.yml` as the
 config=${PWD}/ConfigFiles/train.yml
 ```
 
-Before running the workflow perform a dryrun with the `-n` flag like before
+Before running the pipeline perform a dryrun with the `-n` flag like before
 ```bash
 ./Scripts/run_benchmark.sh
 ```
@@ -317,10 +317,10 @@ total                    8
 
 ```
 
-Now that you've made sure that the dryrun works you are ready to run the training workflow! Remove the `-n` flag from your script: 
+Now that you've made sure that the dryrun works you are ready to run the training pipeline! Remove the `-n` flag from your script: 
 
 ```bash
-# run benchmarking workflow 
+# run benchmarking pipeline 
 apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
 ```
 
@@ -336,7 +336,7 @@ or submitt as a job
 sbatch ./Scripts/run_train.sh
 ```
 
-**4. Monitor workflow** 
+**4. Monitor pipeline** 
 
 Check pipleine progress in the logs:
 
@@ -354,7 +354,7 @@ When the pipeline is done it should print `8 of 8 steps (100%) done` in the log 
 
 **5. Check output files** 
 
-The most important files outputed by the workflow is the model files for each method. These are the models used in the annotation workflow 
+The most important files outputed by the pipeline is the model files for each method. These are the models used in the annotation pipeline 
 
 ```bash
 Out/Train/model/test_reference/Correlation/Correlation_model.Rda
@@ -364,11 +364,11 @@ Out/Train/model/test_reference/Symphony/Symphony_model.Rda
 Out/Train/model/test_reference/scClassify/scClassify_model.Rda
 ```
 
-## Run the annotation workflow 
+## Run the annotation pipeline 
 
 **1. Set up the config file** 
 
-Now you are finally ready to run the annotation workflow!! The first thing you need to do is check the config file for the annotation workflow
+Now you are finally ready to run the annotation pipeline!! The first thing you need to do is check the config file for the annotation pipeline
 
 ```bash
 cat ConfigFiles/annotation.yml
@@ -377,7 +377,7 @@ cat ConfigFiles/annotation.yml
 The mode has now changed to annotate and the output directory has been updated 
 
 ```bash
-# workflow to run 
+# pipeline to run 
 mode: 'annotate'
 
 # output directory 
@@ -426,7 +426,7 @@ consensus:
 
 **2. Set up run script**
 
-Check the run script file for the train workflow
+Check the run script file for the train pipeline
 
 ```bash
 cat Scripts/run_annotate.sh
@@ -438,7 +438,7 @@ It's exactly the same as the benchmarking but now you specify `annotate.yml` as 
 config=${PWD}/ConfigFiles/annotate.yml
 ```
 
-Before running the workflow perform a dryrun with the `-n` flag like before
+Before running the pipeline perform a dryrun with the `-n` flag like before
 
 ```bash
 ./Scripts/run_benchmark.sh
@@ -471,10 +471,10 @@ total                     25
    run to find out!!
 </details>
 
-Now that you've made sure that the dryrun works you are ready to run the annotation workflow! Remove the `-n` flag from your script: 
+Now that you've made sure that the dryrun works you are ready to run the annotation pipeline! Remove the `-n` flag from your script: 
 
 ```bash
-# run benchmarking workflow 
+# run benchmarking pipeline 
 apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
 ```
 
@@ -490,7 +490,7 @@ or submitt as a job
 sbatch ./Scripts/run_annotate.sh
 ```
 
-**4. Monitor workflow** 
+**4. Monitor pipeline** 
 
 Check pipleine progress in the logs:
 
@@ -502,7 +502,7 @@ When the pipeline is done it should print `25 of 25 steps (100%) done` in the lo
 
 **5. Check output files** 
 
-The most important files outputed by the workflow is: 
+The most important files outputed by the pipeline is: 
 - The html reports for each sample and reference found in the reports folder: `Out/Annotate/ct_p6/report/`
 - The `.csv` files with all the prediction results from the individual methods and the consensus:
   `Out/Annotate/ct_p6/test_reference/majority/Prediction_Summary_label.tsv`
@@ -595,7 +595,7 @@ Make sure that the names of the selected tools have the same capitalization and 
 
 The tools selected in **consensus** section can either be 'all' (which uses all the tools in **tools_to_run**) or a list of tools to include. 
 
-The consensus can be calculated as the majority vote, specifying the minimum of tool agreement or/and with CAWPE specifying the mode: CAWPE_CT (using the performance of each tool predicting an specific cell-type) or CAWPE_T (performance of each tool). CAWPE only works if the benchmarking workflow has been run. 
+The consensus can be calculated as the majority vote, specifying the minimum of tool agreement or/and with CAWPE specifying the mode: CAWPE_CT (using the performance of each tool predicting an specific cell-type) or CAWPE_T (performance of each tool). CAWPE only works if the benchmarking pipeline has been run. 
 
 At least one consensus type needs to be specified.
 
@@ -606,14 +606,14 @@ At least one consensus type needs to be specified.
 mode: "annotate"
 
 # target directory 
-output_dir: <output directory for the annotation workflow>
+output_dir: <output directory for the annotation pipeline>
 
 ### Description of some non-tool specific parameters 
 references:
       <reference_name_1>:
             expression: <path to expression matrix, seurat object or single cell experiment>
             labels: <path to labels files>
-            output_dir_benchmark: <output directory for the benchmarking workflow>
+            output_dir_benchmark: <output directory for the benchmarking pipeline>
 
 # path to query datasets (cell x gene raw counts, seurat or single cell experiment)
 query_datasets:
@@ -648,14 +648,14 @@ consensus:
 mode: "pretrain"
 
 # target directory 
-output_dir: <output directory for the annotation workflow>
+output_dir: <output directory for the annotation pipeline>
 
 ### Description of some non-tool specific parameters 
 references:
       <reference_name_1>:
             expression: <path to expression matrix, seurat object or single cell experiment>
             labels: <path to labels files>
-            output_dir_benchmark: <output directory for the benchmarking workflow>
+            output_dir_benchmark: <output directory for the benchmarking pipeline>
 
 # methods to run
 tools_to_run:
@@ -670,14 +670,14 @@ tools_to_run:
 mode: "benchmark"
 
 # target directory 
-output_dir: <output directory for the annotation workflow>
+output_dir: <output directory for the annotation pipeline>
 
 ### Description of some non-tool specific parameters 
 references:
       <reference_name_1>:
             expression: <path to expression matrix, seurat object or single cell experiment>
             labels: <path to labels files>
-            output_dir_benchmark: <output directory for the benchmarking workflow>
+            output_dir_benchmark: <output directory for the benchmarking pipeline>
 
 # methods to run
 tools_to_run:
@@ -787,10 +787,10 @@ TO-DO: description of how the ontology is computed!!
 
 ```yaml
 # mode (ex: "annotate", "benchmark" or "pretrain")
-mode: <workflow mode>
+mode: <pipeline mode>
 
 # target directory 
-output_dir: <output directory for the annotation workflow>
+output_dir: <output directory for the annotation pipeline>
 
 ### Description of some non-tool specific parameters 
 references:
@@ -798,7 +798,7 @@ references:
             expression: <path to expression matrix, seurat object or single cell experiment>
             labels: <path to labels files>
             pretrain_models: <path to pretrained models>
-            output_dir_benchmark: <output directory for the benchmarking workflow>
+            output_dir_benchmark: <output directory for the benchmarking pipeline>
             # Convert gene symbols in reference from mouse to human
             # Accepted values: True, False
             convert_ref_mm_to_hg: False
@@ -890,7 +890,7 @@ Create a corresponding section in your config and change the threshold value to 
 mode: "pretrain"
 
 # target directory 
-output_dir: <output directory for the annotation workflow>
+output_dir: <output directory for the annotation pipeline>
 
 ### Description of some non-tool specific parameters 
 references:
@@ -919,7 +919,7 @@ snakefile=<path to snakefile>
 config=<path to configfile>
 extra_config=<path to your new default config file>
 
-# run workflow 
+# run pipeline 
 snakemake -s ${snakefile} --configfile ${config} ${extra_config} --cores 5
 ```
 
@@ -1066,7 +1066,7 @@ snakemake -s ${snakefile} --configfile ${config} --keep-going
 snakemake -s ${snakefile} --configfile ${config} -c1 -R $(snakemake -s ${snakefile} --configfile ${config} -c1 --list-code-changes) --touch 
 ```
 
-- Generate a report with information about the snakemake workflow 
+- Generate a report with information about the snakemake pipeline 
 ```bash
 snakemake -s ${snakefile} --configfile ${config} --report ${report}
 ```
@@ -1079,7 +1079,7 @@ Documentation written by: Bhavyaa Chandarana
 
 Date written: 2023-07
 
-scClassify workflow was generated using the tutorial below:
+scClassify pipeline was generated using the tutorial below:
 https://www.bioconductor.org/packages/release/bioc/vignettes/scClassify/inst/doc/scClassify.html
 
 * scCoAnnotate input reference and query have cells as the rows, genes as columns. scClassify (and the Seurat function used for normalization, see below) requires genes on the rows and cells on the columns. Therefore, I used `WGCNA::transposeBigData()` (function optimized for large sparse matrices) to transpose the inputs before normalization and training/prediction.
@@ -1124,7 +1124,7 @@ Documentation written by: Rodrigo Lopez Gutierrez
 
 Date written: 2023-08-01
 
-singleCellNet workflow was generated following the tutorial below:
+singleCellNet pipeline was generated following the tutorial below:
 https://pcahan1.github.io/singleCellNet/
 
 Input for `singleCellNet` is raw counts for both reference and query. The reference is normalized within the `scn_train()` function. The query is currently not normalized. In the tutorial example they used raw query data. Furthermore, according to the tutorial, the classification step is robust to the normalization and transformation steps of the query data sets. They claim that one can even directly use raw data to query and still obtains accurate classification. This could be tested in the future with our data to see if normalized queries perform better.
@@ -1157,7 +1157,7 @@ Documentation written by: Bhavyaa Chandarana, updated by Tomas Vega Waichman
 
 Date written: 2023-08-04 
 
-scLearn workflow was generated using the following tutorial: https://github.com/bm2-lab/scLearn#single-label-single-cell-assignment
+scLearn pipeline was generated using the following tutorial: https://github.com/bm2-lab/scLearn#single-label-single-cell-assignment
 
 * scCoAnnotate input reference and query have cells as the rows, genes as columns. scLearn requires genes on the rows and cells on the columns. Therefore, I used `WGCNA::transposeBigData()` (function optimized for large sparse matrices) to transpose the inputs before normalization and training/prediction.
 
@@ -1187,7 +1187,7 @@ Documentation written by: Tomas Vega Waichman
 
 Date written: 2023-08-08     
 
-The Tangram workflow was generated following the tutorial provided below:
+The Tangram pipeline was generated following the tutorial provided below:
 https://tangram-sc.readthedocs.io/en/latest/tutorial_sq_link.html
 
 Tangram maps cells of a single cell reference to a spatial dataset. It cannot be separated into training and test steps.
@@ -1206,7 +1206,7 @@ Documentation written by: Tomas Vega Waichman
 
 Date written: 2023-08-11   
 
-The scAnnotate workflow was generated following the tutorial provided below:
+The scAnnotate pipeline was generated following the tutorial provided below:
 https://cran.r-project.org/web/packages/scAnnotate/vignettes/Introduction.html
 
 * Training and test steps of scAnnotate cannot be separated.
