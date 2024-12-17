@@ -49,7 +49,7 @@ You should now have 4 folders called `Reference`, `Query` `ConfigFiles` and `Scr
 apptainer --version
 ```
 
-If you are on a HPC cluster you can check id apptainer is available as a module 
+If you are on a HPC cluster you can check if apptainer is available as a module 
 
 ```bash
 module spider apptainer 
