@@ -170,7 +170,7 @@ Second, the script runs the snakemake pipeline using the apptainer image
 apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -n -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
 ```
 
-The `-n` flag here specifies that you want to do a `dry run`. This means that the pipeline will tell you which jobs it is going to run without actually running anything. You should always do this before running to make sure that all of your files are in order and that there are no errors. 
+The `-n` flag here specifies that you want to do a `dry run`. This means that the pipeline will tell you which steps it is going to run without actually running anything. You should always do this before running to make sure that all of your files are in order and that there are no errors. 
 
 Execute a dry run like this in the command line:
 
