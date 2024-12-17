@@ -89,7 +89,7 @@ Scripts
 The first thing you need to do is check the config file for the benchmarking pipeline
 
 ```bash
-cat ConfigFiles/benchmarking.yml
+cat ConfigFiles/benchmark.yml
 ```
 
 The confign file specifies which pipeline to run
@@ -149,7 +149,7 @@ The config file is already prepared but you do need to update the paths to be th
 Check the run script file for the benchmarking pipeline
 
 ```bash
-cat Scripts/run_benchmarking.sh
+cat Scripts/run_benchmark.sh
 ```
 
 If you've set up the tutorial folder correctly you don't have to change anything here, except if you are running on a HPC. Then you need to edit the slurm (or other scheduler) parameters at the top of the file 
