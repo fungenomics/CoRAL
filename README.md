@@ -173,7 +173,7 @@ This should print the following, wich tells you that the pipeline will split the
 Make sure that the number of folds and the methods match your config file! 
 
 ```bash
-Job stats:
+
 job                    count
 -------------------  -------
 all                        1
@@ -192,6 +192,7 @@ train_SingleR              5
 train_Symphony             5
 train_scClassify           5
 total                     59
+
 ```
 
 **3. Run the workflow** 
@@ -213,13 +214,173 @@ or submitt as a job
 sbatch ./Scripts/run_benchmark.sh
 ```
 
-**4. Monitor job** 
+**4. Monitor workflow** 
 
 Check pipleine progress in the logs:
 
 ```bash
 cat logs/CoRAL.benchmark.err
 ```
+
+When the pipeline is done 
+
+**5. Check output files** 
+
+The most important files outputed by the workflow is: 
+- The `.html` report generated as the final step in the workflow. This report contains plots and information about the crossvalidation.
+- The 
+
+
+## Run the training workflow 
+
+**1. Set up the config file** 
+
+Now that you have run the benchmarking workflow you can run the training workflow. The first thing you need to do is check the config file for the train workflow
+
+```bash
+cat ConfigFiles/train.yml
+```
+
+The only thing that is different is the `mode` and that you need to add a parameter for the output directory: `output_dir`
+
+```bash
+# workflow to run 
+mode: 'pretrain'
+
+# output directory 
+output_dir: Out/Train
+```
+
+**2. Set up run script**
+
+Check the run script file for the train workflow
+```bash
+cat Scripts/run_train.sh
+```
+
+It's exactly the same as the benchmarking but now you specify `train.yml` as the config file. 
+```bash
+config=${PWD}/ConfigFiles/train.yml
+```
+
+Before running the workflow perform a dryrun with the `-n` flag like before
+```bash
+./Scripts/run_benchmark.sh
+```
+
+The output of the dry run should look like this. The pipeline will run one training step per method specified in the config. 
+```bash
+
+job                  count
+-----------------  -------
+all                      1
+preprocess               1
+pretrain_all             1
+train_Correlation        1
+train_SciBet             1
+train_SingleR            1
+train_Symphony           1
+train_scClassify         1
+total                    8
+
+```
+
+Now that you've made sure that the dryrun works you are ready to run the training workflow! Remove the `-n` flag from your script: 
+
+```bash
+# run benchmarking workflow 
+apptainer exec --contain --cleanenv --pwd "$PWD" $image snakemake -s ${snakefile} --configfile ${config} --cores 1 --rerun-incomplete --keep-going
+```
+
+Run script in command line 
+```bash
+./Scripts/run_train.sh
+```
+
+or submitt as a job 
+```bash
+sbatch ./Scripts/run_train.sh
+```
+
+**4. Monitor workflow** 
+
+Check pipleine progress in the logs:
+
+```bash
+cat logs/CoRAL.train.err
+```
+
+When the pipeline is done 
+
+**5. Check output files** 
+
+The most important files outputed by the workflow is: 
+- The `.html` report generated as the final step in the workflow. This report contains plots and information about the crossvalidation.
+- The 
+
+## Run the annotation workflow 
+
+
+**1. Set up the config file** 
+
+Now you are finally ready to run the annotation workflow!! :) The first thing you need to do is check the config file for the annotation workflow
+
+```bash
+cat ConfigFiles/annotation.yml
+```
+
+The mode has now changed to annotate and the output directory has been updated 
+
+```bash
+# workflow to run 
+mode: 'annotate'
+
+# output directory 
+output_dir: Out/Annotate
+```
+
+In the reference section everything is the same except `pretrain_models`, which is now filled out with the path to the models you trained in the previous section. 
+
+```bash
+# path to reference to train classifiers on (cell x gene raw counts)
+references:
+   test_reference:
+      expression: Reference/expression.csv
+      labels: Reference/labels.csv
+      output_dir_benchmark: Out/Benchmark
+      pretrain_models: Out/Train/models/test_reference
+```
+
+A section has also been added with the query samples. In this case we have added 3 samples from a cortical developmental mouse atlas from embryonic day 16 (ct_e16), post-natal day 0 (ct_p0), and post natal day 6 (ct_p6). 
+
+```bash
+# paths to query data sets 
+query_datasets:
+      ct_e16: Query/ct_e16/expression.csv
+      ct_p0: Query/ct_p0/expression.csv
+      ct_p6: Query/ct_p6/expression.csv
+```
+
+Finally the consensus section has been updated to include paramters for CAWPE (weighted ensemble voting) and majority vote 
+
+```bash
+# consensus prameters 
+consensus:
+      tools:
+            - 'all'
+      type:
+            majority:
+                 min_agree: [2]
+            CAWPE:
+                 type: ['CAWPE_T']
+                 alpha: [4]
+                 metric: 'F1'
+```
+
+# output directory 
+output_dir: Out/Train
+```
+
 
 # :running_woman: Quickstart
 
@@ -499,6 +660,7 @@ references:
       <reference_name>:
             expression: <path to expression matrix, seurat object or single cell experiment>
             labels: <path to labels files>
+            pretrain_models: <path to pretrained models>
             output_dir_benchmark: <output directory for the benchmarking workflow>
             # Convert gene symbols in reference from mouse to human
             # Accepted values: True, False
