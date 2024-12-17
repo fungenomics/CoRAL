@@ -1,0 +1,59 @@
+# Example config for CoRAL annotation workflow
+mode: annotate 
+
+# target directory 
+output_dir: <output directory for the annotation workflow>
+
+# Description of some non-tool specific parameters 
+references:
+      reference1:
+            expression: path/to/seurat.rda 
+            labels: 'celltype' #column in seurat meta data 
+            output_dir_benchmark: path/to/benchmark 
+            convert_ref_mm_to_hg: False
+            ontology:
+                  ontology_path: path/to/ontology.csv 
+                  ontology_column: ['celltype_broad_class', 'celltype_subclass']
+            downsample:
+                  value: 500 # downsample to max 500 cells per label  
+                  stratified: True
+            min_cells_per_cluster: 100 # remove clusters with less than 100 cells 
+      reference2:
+            expression: path/to/expression.csv
+            labels: path/to/labels.csv 
+            output_dir_benchmark: path/to/benchmark 
+            convert_ref_mm_to_hg: False
+            ontology:
+                  ontology_path: path/to/ontology.csv 
+                  ontology_column: ['class']
+            downsample:
+                  value: 0.1 # downsample to 10% of each label 
+                  stratified: True
+            min_cells_per_cluster: 50 # remove clusters with less than 50 cells 
+
+# path to query datasets (cell x gene raw counts, seurat or single cell experiment)
+query_datasets:
+      sample1: path/to/seurat.rda 
+      sample2: path/to/seurat.rda 
+      sample3: path/to/expression.csv 
+
+# classifiers to run
+tools_to_run:
+      - scPred
+      - scHPL 
+      - SVMlinear
+      - SingleR
+      - scClassify
+      - SciBet
+
+# consensus method
+consensus:
+        tools: 
+            - 'all'
+        type:
+            majority:
+                  min_agree: [2, 3]
+            CAWPE:
+                  mode: ['CAWPE_T']
+                  alpha: [4]
+                  accuracy_metric: F1 

@@ -1,0 +1,50 @@
+# Example config for CoRAL annotation workflow
+mode: annotate 
+
+# target directory 
+output_dir: path/to/output/directory
+
+# Description of some non-tool specific parameters 
+references:
+      reference1:
+            output_dir_benchmark: path/to/benchmark
+            pretrain_models: path/to/folder/with/pretrained/models  
+            ontology:
+                  ontology_path: path/to/ontology.csv 
+                  ontology_column: ['celltype_broad_class', 'celltype_subclass']
+      reference2:
+            output_dir_benchmark: path/to/benchmark
+            pretrain_models: path/to/folder/with/pretrained/models 
+            ontology:
+                  ontology_path: path/to/ontology.csv 
+                  ontology_column: ['class']
+
+# path to query datasets (cell x gene raw counts, seurat or single cell experiment)
+query_datasets:
+      sample1: path/to/seurat.rda 
+      sample2: path/to/seurat.rda 
+      sample3: path/to/expression.csv 
+
+# classifiers to run
+tools_to_run:
+      - scPred
+      - scHPL 
+      - SVMlinear
+      - SingleR
+      - scClassify
+      - SciBet
+
+# consensus method
+consensus:
+        tools: 
+            - 'all'
+        type:
+            majority:
+                  min_agree: [2, 3]
+            CAWPE:
+                  mode: ['CAWPE_T']
+                  alpha: [4]
+                  accuracy_metric: F1 
+
+
+                  
