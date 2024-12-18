@@ -8,13 +8,29 @@ CoRAL can be run in different modes.  The **training mode** takes labeled refere
 
 # :orange_book: Tutorial 
 
-This is a tutorial for the three sub-pipelines included in CoRAL. The tutorial uses a small reference and query data set from the developing mouse brain. The tutorial first goes through the benchmarking pipeline, then the training pipeline and finally the annotation pipeline, using example config files and run scripts. For more detailed descriptions of input formats and parameters see the subsequent sections! 
+This is a tutorial for the three sub-pipelines included in CoRAL. 
 
-To start create a folder to run the tutorial in and `cd` into it 
+The tutorial uses a small reference and query data set from the developing mouse brain. The tutorial first goes through the benchmarking pipeline, then the training pipeline and finally the annotation pipeline, using example config files and run scripts. For more detailed descriptions of input formats and parameters see the subsequent sections! 
+
+Whenever you see an Excersise button like this, click it for some extra challenges!! 
+<details>
+  <summary>Exercise</summary>
+  Hello!! :sparkles:
+</details>
+
+## Lets start!! 
+
+To start create a folder to run the tutorial in and `cd` into it
 
 ```bash
 mkdir CoRAL_tutorial
 cd CoRAL_tutorial
+```
+
+Create a folder for the logs
+
+```bash
+mkdir logs
 ```
 
 ## Set up 
@@ -35,7 +51,7 @@ Download the apptainer image (this could take ~10minutes to download)
 curl -L -o CoRAL.sif "https://www.dropbox.com/scl/fi/xyx3d1hbpqssjqaboqdqw/CoRAL.sif?rlkey=l56av1fb2ccd7p721rez3j4u6&st=cp7f1ec8&dl=0"
 ```
 
-You should now have a `.sif` file called `CoRAL.sif`. This is the apptainer immage that contains everything needed to run CoRAL! 
+You should now have a `.sif` file called `CoRAL.sif`. This is the apptainer image that contains everything needed to run CoRAL! 
 
 Download and unzip small data set 
 
@@ -52,7 +68,7 @@ You should now have 4 folders called `Reference`, `Query` `ConfigFiles` and `Scr
 apptainer --version
 ```
 
-If you are on a HPC cluster you can check if apptainer is available as a module 
+If you are on a HPC cluster you can check if apptainer is available as a module. If it is installed as a moudle, load the module in your run scripts before the pipeline command! 
 
 ```bash
 module spider apptainer 
@@ -80,6 +96,7 @@ ConfigFiles
 Query
 Reference
 Scripts
+logs
 ```
 
 ## Run the benchmarking pipeline 
@@ -102,7 +119,7 @@ mode: 'benchmark'
 Where the reference data set files are stored and where to write the output 
 
 ```bash
-# path to reference to train classifiers on (cell x gene raw counts)
+# reference parameters 
 references:
    test_reference:
       expression: Reference/expression.csv
@@ -142,7 +159,7 @@ consensus:
                  min_agree: [2]
 ```
 
-The config file is already prepared but you do need to update the paths to be the full paths to the files! You can find the full path to your folder by running `realpath` in the command line. 
+The config file is already prepared but you do need to update the paths to be the full paths to the files (both input and output paths need to be updated)! You can find the full path to your folder by running `realpath` in the command line. 
 
 **2. Set up run script**
 
@@ -152,7 +169,7 @@ Check the run script file for the benchmarking pipeline
 cat Scripts/run_benchmark.sh
 ```
 
-If you've set up the tutorial folder correctly you don't have to change anything here, except if you are running on a HPC. Then you need to edit the slurm (or other scheduler) parameters at the top of the file 
+If you've set up the tutorial folder correctly you don't have to change anything here, except if you are running on a HPC. Then you need to edit the slurm (or other scheduler) parameters at the top of the file. Don't forget to load the apptainer module or install apptainer on your own! If you are loading the apptainer module you need to add it to your run script before the pipeline command: `module load apptainer` (exchnage apptainer for the name of the module on your cluster!)
 
 The script first sets up the paths to the config file, apptainer image and snake file 
 
@@ -285,11 +302,13 @@ Make sure to update all the paths to the full paths!!!
 **2. Set up run script**
 
 Check the run script file for the train pipeline
+
 ```bash
 cat Scripts/run_train.sh
 ```
 
-It's exactly the same as the benchmarking but now you specify `train.yml` as the config file. 
+It's exactly the same as the benchmarking but now you specify `train.yml` as the config file
+
 ```bash
 config=${PWD}/ConfigFiles/train.yml
 ```
@@ -299,7 +318,7 @@ Before running the pipeline perform a dry run with the `-n` flag like before
 ./Scripts/run_train.sh
 ```
 
-The output of the dry run should look like this. The pipeline will run one training step per method specified in the config. 
+The output of the dry run should look like this. The pipeline will run one training step per method specified in the config
 
 ```bash
 
@@ -354,7 +373,7 @@ When the pipeline is done it should print `8 of 8 steps (100%) done` in the log 
 
 **5. Check output files** 
 
-The most important files outputed by the pipeline is the model files for each method. These are the models used in the annotation pipeline 
+The most important files outputed by the pipeline is the model files for each method. These are the models used in the annotation pipeline. 
 
 ```bash
 Out/Train/model/test_reference/Correlation/Correlation_model.Rda
@@ -371,7 +390,7 @@ Out/Train/model/test_reference/scClassify/scClassify_model.Rda
 Now you are finally ready to run the annotation pipeline!! The first thing you need to do is check the config file for the annotation pipeline
 
 ```bash
-cat ConfigFiles/annotation.yml
+cat ConfigFiles/annotate.yml
 ```
 
 The mode has now changed to annotate and the output directory has been updated 
@@ -387,7 +406,7 @@ output_dir: Out/Annotate
 In the reference section everything is the same except `pretrain_models`, which is now filled out with the path to the models you trained in the previous section. 
 
 ```bash
-# path to reference to train classifiers on (cell x gene raw counts)
+# reference parameters 
 references:
    test_reference:
       expression: Reference/expression.csv
@@ -408,7 +427,7 @@ query_datasets:
 
 Make sure to update all the paths to the full paths!!!
 
-Finally the consensus section has been updated to include paramters for CAWPE (weighted ensemble voting) and majority vote. CAWPE only works if you have run the benchmarking, since it needs the accuracy metrics from the benchmarking to wight the conseunsus. 
+Finally the consensus section has been updated to include paramters for CAWPE (weighted ensemble voting) and majority vote. CAWPE only works if you have run the benchmarking, since it needs the accuracy metrics from the benchmarking to weight the conseunsus. 
 
 ```bash
 # consensus prameters 
@@ -419,7 +438,7 @@ consensus:
             majority:
                  min_agree: [2]
             CAWPE:
-                 type: ['CAWPE_T']
+                 mode: ['CAWPE_T']
                  alpha: [4]
                  metric: 'F1'
 ```
@@ -444,7 +463,7 @@ Before running the pipeline perform a dry run with the `-n` flag like before
 ./Scripts/run_annotate.sh
 ```
 
-The output of the dry run should look like this. The pipeline will run one prediction step per method and sample specified in the config. 
+The output of the dry run should look like this. The pipeline will run one prediction step per method and sample specified in the config
 
 ```bash
 
@@ -509,16 +528,122 @@ The most important files outputed by the pipeline is:
   `Out/Annotate/ct_p6/test_reference/CAWPE/Prediction_Summary_label.tsv`
 - The `.csv` file with the CAWPE scores: `Out/Annotate/ct_p6/test_reference/CAWPE/CAWPE_T_4_label_scores.csv`
 
+## Additional features 
+
+**1. Add an celltype otology for your reference dataset in the benchmarking pipeline** 
+
+In many cases you might have groups of related cell types in your reference data set that you want to merge together. You might have 5 types of neurons but you don't care which type of neuron your cell is, you just care if it's a neuron or not. In this case you can add a cell type ontology file for you're reference data set. You can find an example of this file in `Reference/ontology.csv`
+
+To see the content of this file run:
+
+```bash
+cat Reference/ontology.csv
+```
+
+This `.csv` file maps each label in the reference to a higher level category, like Neuron, Astrocyte or Immune. 
+
+Open your config file 'ConfigFiles/benchmark.yml' and add the ontology file to the reference section like this (add the full path):
+
+```bash
+# reference parameters 
+references:
+   test_reference:
+      expression: expression.csv
+      labels: Reference/labels.csv
+      output_dir_benchmark: Out/Benchmark
+      ontology:
+         ontology_path: Reference/ontology.csv
+```
+
+Now perform a dryrun like before (add the `-n` flag in your pipeline command and run the script in the command line) 
+
+The output of the drydun should look like this:
+
+```bash
+job              count
+-------------  -------
+all                  1
+benchmark_all        1
+consensus            5
+knit_report          2
+total                9
+```
+
+The pipeline is not reruning any of the training and prediction, it's just recomputing the consensus and generating new reports for the different levels of ontology. 
+
+
+Now remove the `-n` flag and rerun the pipeline. When it's done, check the reports folder again and you will see that there is a report for each ontology level! 
+
 <details>
   <summary>Exercise</summary>
-  Use your own data!! :) 
+  Compare the reports from the different ontology levels. Is the performace better or worse for the higher level ontology?
 </details>
+
+**2. Add an celltype otology for your reference dataset in the annotateion pipeline** 
+
+Now that you've added the ontology in the benchmarking pipeline you can do the same for the annotation pipeline. Do the same steps as for the benchmarking: 
+
+- Add the ontology in the config file
+- Perform a dry run (the pipeline should not rerun any of the prediction steps, just the consensus and report steps)
+- Run the workflow again
+- Check the reports folder
+
+<details>
+  <summary>Exercise</summary>
+  Compare the reports from the different ontology levels. Is the performace better or worse for the higher level ontology?
+</details>
+
+**3. Use Seurat or SingleCellExperiment objects as input instead of .csv** 
+
+It is possible to input `Seurat` (v3 or v4) or `SingleCellExperiment` objects instead of `.csv` files for both the reference and the query data sets. The objects need to be saved as `.Rda` or `.Rds`. 
+
+If you had a reference data set saved as `Reference.Rda` in the Reference folder you would specify it like this in the config file: 
+
+```bash
+# reference parameters 
+references:
+   test_reference:
+      expression: Reference/Reference.Rda 
+      labels: 'celltype'
+      output_dir_benchmark: Out/Benchmark
+```
+
+Notice that the `labels:` parameter is now a column name in the meta data of the object instead of a `.csv` file. The column can be named anything and it's specified in the same way for Seurat or SingleCellExperiment.
+
+If you have your query samples saved as Seurat or SingleCellExperiment you would specify them like this:
+
+```bash
+# paths to query data sets 
+query_datasets:
+      ct_e16: Query/ct_e16/expression.Rda
+      ct_p0: Query/ct_p0/expression.Rda
+      ct_p6: Query/ct_p6/expression.Rda
+```
+
+You could also have a mix of `.Rda`, `.Rds` and `.csv`! 
+
+```bash
+# paths to query data sets 
+query_datasets:
+      ct_e16: Query/ct_e16/expression.Rds
+      ct_p0: Query/ct_p0/expression.Rda
+      ct_p6: Query/ct_p6/expression.csv
+```
+
+<details>
+  <summary>Exercise</summary>
+  If you are very ambitious you can try to save the .csv files as seurat objects and rerun the pipeline with these! 
+</details>
+
 
 ## Tutorial Over!! 
 
 Good job! For more information about each pipline, snakemake, parameters and other things see the rest of this documentation. 
 
-
+<details>
+  <summary>Exercise</summary>
+  Use your own data!! :) 
+</details>
 
 # :running_woman: Quickstart
 
@@ -600,7 +725,107 @@ The consensus can be calculated as the majority vote, specifying the minimum of 
 
 At least one consensus type needs to be specified.
 
-**Minimal config file for annotation:** runs both training and mapping 
+**Minimal config file for cross validation:**
+
+```yaml
+# mode
+mode: "benchmark"
+
+# target directory 
+output_dir: <output directory for the annotation pipeline>
+
+### Description of some non-tool specific parameters 
+references:
+      <reference_name_1>:
+            expression: <path to expression matrix, seurat object or single cell experiment>
+            labels: <path to labels files>
+            output_dir_benchmark: <output directory for the benchmarking pipeline>
+
+# methods to run
+tools_to_run:
+      - tool1
+      - tool2
+
+benchmark:
+      n_folds: <number of folds to use in the benchmarking>
+
+# consensus method
+consensus:
+      tools: 
+            - 'all'
+      type:
+            majority:
+                  # ex: [3], [3, 4, 5]
+                  min_agree: [<minimum agreemeent to use>]
+```
+
+**Minimal config file for training:**
+
+!!! Some tools can not be preptrained: `scAnnotate`, `scID`, `scNym`
+
+```yaml
+# mode
+mode: "pretrain"
+
+# target directory 
+output_dir: <output directory for the annotation pipeline>
+
+### Description of some non-tool specific parameters 
+references:
+      <reference_name_1>:
+            expression: <path to expression matrix, seurat object or single cell experiment>
+            labels: <path to labels files>
+            output_dir_benchmark: <output directory for the benchmarking pipeline>
+
+# methods to run
+tools_to_run:
+      - tool1
+      - tool2
+```
+
+**Minimal config file for annotation:** 
+
+```yaml
+# mode
+mode: "annotate"
+
+# target directory 
+output_dir: <output directory for the annotation pipeline>
+
+### Description of some non-tool specific parameters 
+references:
+      <reference_name_1>:
+            expression: <path to expression matrix, seurat object or single cell experiment>
+            labels: <path to labels files>
+            output_dir_benchmark: <output directory for the benchmarking pipeline>
+            pretrain_models: <path to pretrained models>
+
+# path to query datasets (cell x gene raw counts, seurat or single cell experiment)
+query_datasets:
+      <query_name_1>: <path to counts 1>
+      <query_name_2>: <path to counts 2>
+      <query_name_3>: <path to counts 3>
+
+# methods to run
+tools_to_run:
+      - tool1
+      - tool2
+
+# consensus method
+consensus:
+      tools: 
+            - 'all'
+      type:
+            majority:
+                  # ex: [3], [3, 4, 5]
+                  min_agree: [<minimum agreemeent to use>]
+            CAWPE:
+                  # ex: ['CAWPE_T'], ['CAWPE_T','CAWPE_CT']
+                  mode: [<CAWPE mode>]
+```
+
+
+**Minimal config file for training+annotation in one go (no pretrained models):** runs both training and mapping 
 
 ```yaml
 # mode
@@ -640,63 +865,6 @@ consensus:
                   mode: [<CAWPE mode>]
 ```
 
-**Minimal config file for training:**
-
-!!! Some tools can not be preptrained: `scAnnotate`, `scID`, `scNym`
-
-```yaml
-# mode
-mode: "pretrain"
-
-# target directory 
-output_dir: <output directory for the annotation pipeline>
-
-### Description of some non-tool specific parameters 
-references:
-      <reference_name_1>:
-            expression: <path to expression matrix, seurat object or single cell experiment>
-            labels: <path to labels files>
-            output_dir_benchmark: <output directory for the benchmarking pipeline>
-
-# methods to run
-tools_to_run:
-      - tool1
-      - tool2
-```
-
-**Minimal config file for cross validation:**
-
-```yaml
-# mode
-mode: "benchmark"
-
-# target directory 
-output_dir: <output directory for the annotation pipeline>
-
-### Description of some non-tool specific parameters 
-references:
-      <reference_name_1>:
-            expression: <path to expression matrix, seurat object or single cell experiment>
-            labels: <path to labels files>
-            output_dir_benchmark: <output directory for the benchmarking pipeline>
-
-# methods to run
-tools_to_run:
-      - tool1
-      - tool2
-
-benchmark:
-      n_folds: <number of folds to use in the benchmarking>
-
-# consensus method
-consensus:
-      tools: 
-            - 'all'
-      type:
-            majority:
-                  # ex: [3], [3, 4, 5]
-                  min_agree: [<minimum agreemeent to use>]
-```
 
 See: [Changing Default Parameters](##changing-default-parameters)   
 See: [Detailed description of Config File](##detailed-description-of-config-file)    
