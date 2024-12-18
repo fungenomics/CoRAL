@@ -147,8 +147,7 @@ rule ontology:
 rule consensus:
   input:
     results = expand(config["output_dir"] + "/{{sample}}/{{reference}}/{tool}/{tool}_pred.csv",
-                     tool=tools_to_run), 
-    ontology = config['output_dir'] + "/model/{reference}/ontology/ontology.csv"
+                     tool=tools_to_run)
   output:
     prediction_summary = config['output_dir'] + "/{sample}/{reference}/{consensus_type}/Prediction_Summary_{ontology}.tsv"
   log: 
@@ -164,6 +163,7 @@ rule consensus:
     CAWPE_mode = config["consensus"]["type"]["CAWPE"]["mode"],
     alpha = config["consensus"]["type"]["CAWPE"]["alpha"],
     ontology_label = "{ontology}",
+    ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"], 
     accuracy_metric = config["consensus"]["type"]["CAWPE"]["accuracy_metric"]
   shell:
     """
@@ -175,7 +175,7 @@ rule consensus:
     "{params.consensus_type}" \
     "{params.min_agree}" \
     "{params.ontology_label}" \
-    "{input.ontology}" \
+    "{params.ontology_path}" \
     {params.metrics_file} \
     "{params.CAWPE_mode}" \
     "{params.alpha}" \
@@ -196,8 +196,7 @@ def ontology_function(wildcards):
 rule knit_report:
   input: 
     pred = ontology_function,
-    query = lambda wildcards:config['query_datasets'][wildcards.sample],
-    ontology = config['output_dir'] + "/model/{reference}/ontology/ontology.csv"
+    query = lambda wildcards:config['query_datasets'][wildcards.sample]
   output: 
     report_path = config['output_dir'] + '/{sample}/report/{sample}.{consensus_type}.prediction_report.{reference}.' + dt_string + '.html'
   log:
@@ -210,6 +209,7 @@ rule knit_report:
     consensus_tools = consensus_tools,
     refs = "{reference}",
     ontology_columns = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"],
+    ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"], 
     marker_genes = config['marker_genes'],
     cons_type = "{consensus_type}"
   threads: 1
@@ -228,7 +228,7 @@ rule knit_report:
                           marker_genes  = '{params.marker_genes}',
                           threads       = '{threads}',
                           query         = '{input.query}',
-                          ontology_path = '{input.ontology}',
+                          ontology_path = '{params.ontology_path}',
                           ontology_columns = '{params.ontology_columns}'),
             output_file = '{output.report_path}')" \
     &> {log}
