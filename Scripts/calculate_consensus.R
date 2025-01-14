@@ -190,9 +190,9 @@ if(consensus_type == 'majority' & all(min_agree != 0)){
   
       print(head(data))
         
-      consensus[, paste0("CAWPE_",CW_tp,"_",aph)]         = data[consensus$cellname, "CAWPE", drop=T]
-      consensus[, paste0("CAWPE_entropy_",CW_tp,"_",aph)] = data[consensus$cellname, "entropy", drop=T]
-      consensus[, paste0("Consensus_",CW_tp,"_",aph)]     = data[consensus$cellname, "Consensus", drop=T]
+      consensus[, paste0("CAWPE_",CW_tp,"_",aph)]         = data[as.character(consensus$cellname), "CAWPE", drop=T]
+      consensus[, paste0("CAWPE_entropy_",CW_tp,"_",aph)] = data[as.character(consensus$cellname), "entropy", drop=T]
+      consensus[, paste0("Consensus_",CW_tp,"_",aph)]     = data[as.character(consensus$cellname), "Consensus", drop=T]
 
      
      }

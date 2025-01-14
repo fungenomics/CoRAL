@@ -34,14 +34,14 @@ consensus_run = func.get_consensus_methods(config)
 # get tools to run
 tools_to_run = func.get_tools_to_run(config)
 consensus_tools = func.get_consensus_tools(config)
-print(consensus_tools,flush=True)
+#print(consensus_tools,flush=True)
 
 func.set_reference_pretrained_parameter(config,tools_to_run)
 
 # get feature selection method
 feature_selection_method = func.get_feature_selection_method(config,tools_to_run)
-print(feature_selection_method,flush=True)
-print(config,flush=True)
+#print(feature_selection_method,flush=True)
+#print(config,flush=True)
 
 #----------------------------------------------------
 #  Final rule all 
@@ -91,7 +91,8 @@ rule preprocess:
     downsample_per_class = lambda wildcards:config["references"][wildcards.reference]['downsample']['stratified'],
     feature_selection_method = feature_selection_method,
     pipeline_mode = "annotation",
-    random_seed = config['seed']
+    random_seed = config['seed'],
+    gene_threshold = config['gene_threshold']
   shell:
     """
     Rscript {params.basedir}/Scripts/preprocess.R \
@@ -109,6 +110,7 @@ rule preprocess:
     "{params.feature_selection_method}" \
     "{params.pipeline_mode}" \
     "{params.random_seed}" \
+    "{params.gene_threshold}" \
     &> {log} 
     """
 
@@ -147,7 +149,8 @@ rule ontology:
 rule consensus:
   input:
     results = expand(config["output_dir"] + "/{{sample}}/{{reference}}/{tool}/{tool}_pred.csv",
-                     tool=tools_to_run)
+                     tool=tools_to_run), 
+    ontology = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"]
   output:
     prediction_summary = config['output_dir'] + "/{sample}/{reference}/{consensus_type}/Prediction_Summary_{ontology}.tsv"
   log: 

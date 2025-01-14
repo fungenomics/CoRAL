@@ -2,6 +2,9 @@
 #--- PREPROCESS ------
 
 output_dir_benchmark: ""
+
+gene_threshold: 0.25
+
 seed: 1234
 
 #--- CONSENSUS -------

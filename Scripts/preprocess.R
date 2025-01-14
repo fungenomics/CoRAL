@@ -52,6 +52,10 @@ print(feature_selection_method)
 
 pipeline_mode = args[13]
 print(pipeline_mode)
+
+# threshold overlap genes 
+gene_overlap_threshold = as.numeric(args[15])
+
 # ----- PREPROCESS REFERENCE ----------------------
 tmp <- get_data_reference(ref_path = ref_path,
                           lab_path = lab_path,
@@ -146,13 +150,13 @@ for(ft_mth in feature_selection_method){
     # reduce set of genes to the intersect 
     common_genes = Reduce(intersect,genes)
     print(paste0('@Found ', length(common_genes), ' in common'))
+    
     # throw error if number of common genes below % threshold of genes in any of provided datasets (ref or query) 
-    threshold = 0.25
     frac = lapply(genes, function(x){length(common_genes)/length(x)})
-    if(any(frac < threshold)){
+    if(any(frac < gene_overlap_threshold)){
       names(frac) = names(data)
       print(frac)
-      stop(paste0("@ In at least one provided dataset (ref or query), less than ",threshold*100,"% of genes appear in common gene set. See above for the fraction of genes from each dataset appearing in common gene set (note: samples with few genes will have higher fractions)"))
+      stop(paste0("@ In at least one provided dataset (ref or query), less than ",gene_overlap_threshold*100,"% of genes appear in common gene set. See above for the fraction of genes from each dataset appearing in common gene set (note: samples with few genes will have higher fractions)"))
     }
     # save common genes 
     data.table::fwrite(data.frame('common_genes' = common_genes),
