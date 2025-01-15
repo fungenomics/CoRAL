@@ -51,6 +51,8 @@ Download the apptainer image (this could take ~10minutes to download)
 curl -L -o CoRAL.sif "https://www.dropbox.com/scl/fi/xyx3d1hbpqssjqaboqdqw/CoRAL.sif?rlkey=l56av1fb2ccd7p721rez3j4u6&st=cp7f1ec8&dl=0"
 ```
 
+Or get the docker image from docker hub: https://hub.docker.com/r/kleinmanlab/coral
+
 You should now have a `.sif` file called `CoRAL.sif`. This is the apptainer image that contains everything needed to run CoRAL! 
 
 Download and unzip small data set 
