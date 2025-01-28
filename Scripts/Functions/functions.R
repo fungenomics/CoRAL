@@ -294,9 +294,9 @@ CAWPE = function(x, alpha = 4){
 
 
 get_cawpe_columns = function(CAWPE_type){
-    if(CW_tp == 'CAWPE_T'){
+    if(CW_tp %in% c('CAWPE_T','CAWPEw_T')){
       cols = c('tool')
-    }else if(CW_tp == 'CAWPE_CT'){
+    }else if(CW_tp %in% c('CAWPE_CT')){
       cols = c('tool', 'ontology')
     }
   return(cols) 

@@ -152,14 +152,25 @@ if(consensus_type == 'majority' & all(min_agree != 0)){
                       mean_metric = unique(mean_metric))
       # calculate cawpe       
       data$CAWPE = (as.numeric(data$mean_metric)^aph) * as.numeric(data$prob_ont)
-         
-      # add up the CAWPE scores for each class for each cell 
-      data = data %>%
-           group_by(cellname, ontology) %>%
-        #Doing the mean it norm by the number of tools and is comparable between ref (value between 0 and 1)
-           summarise(CAWPE = mean(CAWPE)) %>% 
-           ungroup() 
-      
+      #If the CAWPE is the mean 
+      # I splitted it because doing the mean its faster than the sum over the norm factor
+      if(CW_tp %in% c('CAWPE_T','CAWPE_CT')){  
+        # add up the CAWPE scores for each class for each cell 
+        data = data %>%
+             group_by(cellname, ontology) %>%
+          #Doing the mean it norm by the number of tools and is comparable between ref (value between 0 and 1)
+             summarise(CAWPE = mean(CAWPE)) %>% 
+             ungroup() 
+      #If is the weighted mean
+      } else if(CW_tp %in% c('CAWPEw_T')){
+        #Sum the weights
+        norm_factor <- sum(as.numeric(unique(data$mean_metric))^aph)
+        data = data %>%
+          group_by(cellname, ontology) %>%
+          #Doing the mean it norm by the number of tools and is comparable between ref (value between 0 and 1)
+          summarise(CAWPE = sum(CAWPE)/norm_factor) %>% 
+          ungroup() 
+      }
       data = data %>% 
              group_by(cellname) %>% 
              mutate(prop = CAWPE / sum(CAWPE)) %>% 
