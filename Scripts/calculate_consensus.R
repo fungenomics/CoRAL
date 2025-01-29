@@ -156,15 +156,19 @@ if(consensus_type == 'majority' & all(min_agree != 0)){
       # I splitted it because doing the mean its faster than the sum over the norm factor
       if(CW_tp %in% c('CAWPE_T','CAWPE_CT')){  
         # add up the CAWPE scores for each class for each cell 
+        norm_factor <- length(consensus_tools)
+        
         data = data %>%
              group_by(cellname, ontology) %>%
           #Doing the mean it norm by the number of tools and is comparable between ref (value between 0 and 1)
-             summarise(CAWPE = mean(CAWPE)) %>% 
+             summarise(CAWPE = sum(CAWPE)/norm_factor) %>% 
              ungroup() 
       #If is the weighted mean
       } else if(CW_tp %in% c('CAWPEw_T')){
         #Sum the weights
-        norm_factor <- sum(as.numeric(unique(data$mean_metric))^aph)
+         
+        norm_factor = sum(data %>% group_by(tool) %>% summarise(met = as.numeric(unique(mean_metric))^aph) %>% .$met)
+        
         data = data %>%
           group_by(cellname, ontology) %>%
           #Doing the mean it norm by the number of tools and is comparable between ref (value between 0 and 1)
@@ -205,7 +209,6 @@ if(consensus_type == 'majority' & all(min_agree != 0)){
       consensus[, paste0("CAWPE_entropy_",CW_tp,"_",aph)] = data[as.character(consensus$cellname), "entropy", drop=T]
       consensus[, paste0("Consensus_",CW_tp,"_",aph)]     = data[as.character(consensus$cellname), "Consensus", drop=T]
 
-     
      }
    }
 }
