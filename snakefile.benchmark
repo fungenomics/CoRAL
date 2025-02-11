@@ -815,7 +815,8 @@ rule predict_ACTINN:
   output:
     pred = "{output_dir_benchmark}/{reference}/fold{folds_index}/ACTINN/ACTINN_pred.csv"
   params:
-    basedir = {workflow.basedir}
+    basedir = {workflow.basedir},
+    threshold = config['ACTINN']['threshold']
   log:
     "{output_dir_benchmark}/{reference}/fold{folds_index}/ACTINN/ACTINN.log"
   benchmark:
@@ -829,6 +830,7 @@ rule predict_ACTINN:
            -ts {input.query} \
            -mp {input.model} \
            -pp {output.pred} \
+           -thr {params.threshold} \
     &> {log}
 
     """

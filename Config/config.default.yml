@@ -88,6 +88,7 @@ SVC:
 
 ACTINN:
   threads: 1
+  threshold: 0.5
   gene_selection: "intersection"
 
 scLearn:
