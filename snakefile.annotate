@@ -150,7 +150,7 @@ rule consensus:
   input:
     results = expand(config["output_dir"] + "/{{sample}}/{{reference}}/{tool}/{tool}_pred.csv",
                      tool=tools_to_run), 
-    ontology = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"]
+    ontology_path = config['output_dir'] + "/model/{reference}/ontology/ontology.csv"
   output:
     prediction_summary = config['output_dir'] + "/{sample}/{reference}/{consensus_type}/Prediction_Summary_{ontology}.tsv"
   log: 
@@ -166,7 +166,6 @@ rule consensus:
     CAWPE_mode = config["consensus"]["type"]["CAWPE"]["mode"],
     alpha = config["consensus"]["type"]["CAWPE"]["alpha"],
     ontology_label = "{ontology}",
-    ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"], 
     accuracy_metric = config["consensus"]["type"]["CAWPE"]["accuracy_metric"]
   shell:
     """
@@ -212,7 +211,7 @@ rule knit_report:
     consensus_tools = consensus_tools,
     refs = "{reference}",
     ontology_columns = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"],
-    ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"], 
+    ontology_path = config['output_dir'] + "/model/{reference}/ontology/ontology.csv", 
     marker_genes = config['marker_genes'],
     cons_type = "{consensus_type}"
   threads: 1
