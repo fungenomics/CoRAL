@@ -127,15 +127,12 @@ rule ontology:
      config['output_dir'] + "/model/{reference}/ontology.log"
   params:
      basedir = {workflow.basedir},
-     out = config['output_dir'],
-     reference_name = "{reference}",
      ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"],
      ontology_column = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"]
   shell:
      """
       Rscript {params.basedir}/Scripts/ontology.R \
-       {params.out} \
-       {params.reference_name} \
+       {output.ontology} \
        {input.labfile} \
        "{params.ontology_path}" \
        "{params.ontology_column}" \
@@ -177,7 +174,7 @@ rule consensus:
     "{params.consensus_type}" \
     "{params.min_agree}" \
     "{params.ontology_label}" \
-    "{params.ontology_path}" \
+    "{input.ontology_path}" \
     {params.metrics_file} \
     "{params.CAWPE_mode}" \
     "{params.alpha}" \

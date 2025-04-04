@@ -83,7 +83,8 @@ rule subset_folds:
   output:
     training_data = expand("{{output_dir_benchmark}}/{{reference}}/fold{folds_index}/train.csv", folds_index = n_folds),
     labfile = expand("{{output_dir_benchmark}}/{{reference}}/fold{folds_index}/train_labels.csv", folds_index = n_folds),
-    test_data = expand("{{output_dir_benchmark}}/{{reference}}/fold{folds_index}/test.csv", folds_index = n_folds)
+    test_data = expand("{{output_dir_benchmark}}/{{reference}}/fold{folds_index}/test.csv", folds_index = n_folds),
+    downsampled_reference = "{output_dir_benchmark}/{reference}/downsampled_reference_labels.csv"
   log:
     "{output_dir_benchmark}/{reference}/subset_folds.log"
   params:
@@ -96,8 +97,6 @@ rule subset_folds:
     min_cells_per_cluster = lambda wildcards:config["references"][wildcards.reference]['min_cells_per_cluster'],
     downsample_value = lambda wildcards:config["references"][wildcards.reference]['downsample']['value'],
     downsample_stratified = lambda wildcards:config["references"][wildcards.reference]['downsample']['stratified'],
-    ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"],
-    ontology_column = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"],
     random_seed = config['seed']
   threads: 1
   resources:
@@ -112,8 +111,6 @@ rule subset_folds:
     {params.min_cells_per_cluster} \
     {params.downsample_value} \
     {params.downsample_stratified} \
-    "{params.ontology_path}" \
-    "{params.ontology_column}" \
     {params.batch_path} \
     "{params.random_seed}" \
     &> {log}
@@ -142,8 +139,8 @@ rule knit_report:
     min_agree = config['consensus']['type']['majority']['min_agree'],
     ref_name = "{reference}",
     accuracy_metric = "F1",
-    ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"],
     ontology_columns = "{ontology}",
+    ontology_path = "{output_dir_benchmark}/{reference}/ontology/ontology.csv"
   resources:
   shell:
     """
@@ -162,13 +159,39 @@ rule knit_report:
     """
 
 #----------------------------------------------------
+#  Ontology 
+#----------------------------------------------------
+
+rule ontology:
+  input:
+     labfile = "{output_dir_benchmark}/{reference}/downsampled_reference_labels.csv"
+  output:
+     ontology ="{output_dir_benchmark}/{reference}/ontology/ontology.csv"
+  log:
+     "{output_dir_benchmark}/{reference}/ontology/ontology.log"
+  params:
+     basedir = {workflow.basedir},
+     ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"],
+     ontology_column = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"]
+  shell:
+     """
+      Rscript {params.basedir}/Scripts/ontology.R \
+       {output.ontology} \
+       {input.labfile} \
+       "{params.ontology_path}" \
+       "{params.ontology_column}" \
+      &> {log}
+     """
+
+#----------------------------------------------------
 #  Consensus
 #----------------------------------------------------
 
 rule consensus:
   input:
     results = expand("{{output_dir_benchmark}}/{{reference}}/fold{{folds_index}}/{tool}/{tool}_pred.csv",
-                     tool=tools_to_run)
+                     tool=tools_to_run),
+    ontology_path = "{output_dir_benchmark}/{reference}/ontology/ontology.csv"
   output:
     prediction_summary = "{output_dir_benchmark}/{reference}/fold{folds_index}/Prediction_Summary_{ontology}.tsv"
   log:
@@ -180,7 +203,6 @@ rule consensus:
     consensus_type = 'majority',
     sample = "{output_dir_benchmark}/{reference}/fold{folds_index}",
     min_agree = config["consensus"]["type"]["majority"]["min_agree"],
-    ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"], 
     ontology_label = "{ontology}"
   shell:
     """
@@ -192,7 +214,7 @@ rule consensus:
     "{params.consensus_type}" \
     "{params.min_agree}" \
     "{params.ontology_label}" \
-    "{params.ontology_path}" \
+    "{input.ontology_path}" \
     &> {log}
     """
 

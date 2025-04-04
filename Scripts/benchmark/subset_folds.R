@@ -10,8 +10,8 @@ source(paste0(dirname(dirname(script.name)), "/Functions/functions.R"))
 
 args = commandArgs(trailingOnly = TRUE)
 
-print(paste0("@ Using seed ",as.character(args[12])))
-set.seed(as.numeric(args[12]))
+print(paste0("@ Using seed ",as.character(args[10])))
+set.seed(as.numeric(args[10]))
 
 ref_path = args[1]
 lab_path = args[2]
@@ -44,10 +44,10 @@ if(is.na(downsample_stratified)){
 
 #downsample_stratified = if(downsample_stratified) "label" else NULL
 
-ontology_path = args[9]
-ontology_columns = strsplit(args[10], split = ' ')[[1]]
+# ontology_path = args[9]
+# ontology_columns = strsplit(args[10], split = ' ')[[1]]
 
-batch_path = args[11]
+batch_path = args[9]
 if(batch_path == 'None'){
   batch_path = NULL
 }
@@ -55,8 +55,8 @@ if(batch_path == 'None'){
 print(batch_path)
 print(downsample_stratified)
 print(class(downsample_stratified))
-print(ontology_path)
-print(ontology_columns)
+# print(ontology_path)
+# print(ontology_columns)
 
 #--------------- Data -------------------
 # read reference matrix 
@@ -151,16 +151,3 @@ for (i in 1:n_folds){
   data.table::fwrite(train, paste0(out_path, '/fold', i, '/train.csv'))
   data.table::fwrite(train_labels, paste0(out_path, '/fold', i, '/train_labels.csv'))
 }
-
-#----- SAVE BASE ONTOLOGY ------------------------------
-
-if(length(ontology_columns) == 1 & ontology_columns[1] == 'label'){
-  dir.create(paste0(out_path, '/ontology/'), recursive = T)
-  lab = data.frame(label = unique(labels$label))
-  
-  data.table::fwrite(lab, 
-                     file = paste0(out_path, '/ontology/ontology.csv'),
-                     sep = ',')
-}
-
-#--------------------------------------------------------
