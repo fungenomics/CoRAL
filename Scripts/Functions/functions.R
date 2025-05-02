@@ -784,4 +784,104 @@ plot_n_cells_per_class = function(df){
   return(b)
 }
 
+plot_performance_by_class <- function(metrics_label,
+                                      accuracy_metric){
+  mean_df <- metrics_label %>%
+    filter(!(tool %in% grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE))) %>% 
+    group_by(class) %>%
+    summarise(mean_perf = mean(.data[[accuracy_metric]]), .groups = "drop") %>%
+    mutate(class = reorder(class, -mean_perf),
+           text = paste0("Mean\nClass: ", class,
+                         "\nMean Perf.: ", round(mean_perf, 3)))
+  
+  ntools <- metrics_label %>%
+    filter(!(tool %in% grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE))) %>% 
+    .$tool %>% 
+    unique %>% 
+    length
+  # Main plot
+  p <- metrics_label %>%
+    filter(!(tool %in% grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE))) %>% 
+    group_by(class, tool) %>%
+    summarise(MacroPerformance = mean(.data[[accuracy_metric]]), .groups = "drop") %>%
+    group_by(class) %>%
+    mutate(mean_macro = mean(MacroPerformance)) %>%
+    ungroup() %>%
+    mutate(class = reorder(class, -mean_macro),
+           Methods = tool) %>%
+    ggplot(aes(y = class,
+               x = MacroPerformance,
+               col = Methods,
+               fill = Methods,
+               text = paste("Method:", Methods,
+                            '\nClass:', class,
+                            '\nPerformance:', round(MacroPerformance, 3)))) +
+    xlab(glue('Performance (macro {accuracy_metric})')) + 
+    ylab('Class') +
+    geom_vline(xintercept = 0.75, color = 'grey80', linetype = 'dashed') +
+    geom_point(# colour = "grey30",
+      pch = 21, 
+      alpha = 0.5,
+      size = 1) +
+    scale_color_manual(values = rep('grey30',ntools)) +
+    scale_fill_manual(values = rep('grey70',ntools)) +
+    # Add precomputed means with hover text
+    geom_point(data = mean_df,
+               aes(x = mean_perf, y = class, text = text),
+               inherit.aes = FALSE,
+               color = "red",
+               size = 2) +
+    notebook_theme
+  
+  p <- ggplotly(p, tooltip = "text") %>% toWebGL()
+  return(p)
+}
+
+plot_performance_by_tool<- function(metrics_label, accuracy_metric){
+  mean_df <- metrics_label %>%
+    filter(!(tool %in% grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE))) %>% 
+    group_by(tool) %>%
+    summarise(mean_perf = mean(.data[[accuracy_metric]]), .groups = "drop") %>%
+    mutate(tool = reorder(tool, -mean_perf),
+           text = paste0("Mean\nTool: ", tool,
+                         "\nMean Perf.: ", round(mean_perf, 3)))
+  
+  nclass <- metrics_label$class %>% unique %>% length
+  
+  p <- metrics_label %>%
+    filter(!(tool %in% grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE))) %>% 
+    group_by(class, tool) %>%
+    summarise(MacroPerformance = mean(.data[[accuracy_metric]]), .groups = "drop") %>%
+    group_by(tool) %>%
+    mutate(mean_macro = mean(MacroPerformance)) %>%
+    ungroup() %>%
+    mutate(tool = reorder(tool, -mean_macro),
+           Class = class) %>%
+    ggplot(aes(y = tool,
+               x = MacroPerformance,
+               col = Class,
+               fill = Class,
+               text = paste("Method:", tool,
+                            '\nClass:', Class,
+                            '\nPerformance:', round(MacroPerformance, 3)),
+               group = tool)) +
+    xlab(glue('Performance (macro {accuracy_metric})')) + 
+    ylab('Method') +
+    geom_vline(xintercept = 0.75, color = 'grey80', linetype = 'dashed') +
+    geom_point(pch = 21, 
+               alpha = 0.5,
+               size = 1) +
+    scale_color_manual(values = rep('grey30',nclass)) +
+    scale_fill_manual(values = rep('grey70',nclass)) +
+    # Add precomputed means with hover text
+    geom_point(data = mean_df,
+               aes(x = mean_perf, y = tool, text = text),
+               inherit.aes = FALSE,
+               color = "red",
+               size = 2) +
+    notebook_theme
+  p <- ggplotly(p, tooltip = "text") %>% toWebGL()
+  return(p)
+}
+
 #-----------------------------------------------------------------------

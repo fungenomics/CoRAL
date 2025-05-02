@@ -24,13 +24,17 @@ params:
 knitr::opts_chunk$set(message = FALSE, warning=FALSE)
 ```
 
-```{r}
+```{r, fig.show='hide', include=F}
 set.seed(1234)
 library(tidyverse)
 # library(caret)
 library(ComplexHeatmap)
-
+library(glue)
+library(plotly)
 source(paste0(dirname(params$wd), '/Scripts/Functions/functions.R'))
+
+#empty plotly plot to make sure the other plotly plots get printed later 
+plotly_empty() 
 ```
 
 ```{r}
@@ -119,7 +123,7 @@ test_lab$label <- apply_ontology(df_ontology = ontology,
                                     to = ontology_columns)
 ```
 
-```{r fig.width=10,echo=FALSE,message=FALSE,results="asis"}
+```{r echo=FALSE,message=FALSE,results="asis",fig.height=10,fig.width=10}
 cat("  \n#", params$ref_name , "{.tabset} \n")
 
 cat("  \n## Summary \n")
@@ -128,7 +132,16 @@ cat("<h3>Average metric score per tool and class</h3>")
 plot_mean_tool(list, accuracy_metric, tools, test_lab)
 
 cat("\n")
+cat("<h3>Average metric score per class</h3>") 
+p = plot_performance_by_class(accuracy_metric_res,accuracy_metric)
+print(htmltools::tagList(p))
 
+cat("\n")
+cat("<h3>Average metric score per tool</h3>") 
+p = plot_performance_by_tool(accuracy_metric_res,accuracy_metric)
+print(htmltools::tagList(p))
+
+cat("\n")
 for(t in tools) {
   cat("  \n##",  t, "{.tabset} \n")
   
