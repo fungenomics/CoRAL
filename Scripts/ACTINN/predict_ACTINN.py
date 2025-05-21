@@ -11,6 +11,16 @@ run_time = timeit.default_timer()
 from tensorflow.python.framework import ops
 import pickle
 import os
+import random
+
+#Set seed
+random.seed(123456) 
+
+def get_max_column_and_value(row):
+    pred_label = row.idxmax()
+    proba_label = row.max()
+    return pred_label, proba_label
+
 
 
 def get_parser(parser=None):
@@ -19,6 +29,7 @@ def get_parser(parser=None):
     parser.add_argument("-ts", "--test_set", type=str, help="Training set file path.")
     parser.add_argument("-mp", "--model_path", type=str, help="Model file path.")
     parser.add_argument("-pp", "--pred_path", type=str, help="Output prediction file path.")
+    parser.add_argument("-thr", "--threshold", type=float, help="Threshold for rejection file path.")
     return parser
 
 
@@ -185,7 +196,26 @@ def forward_propagation_for_predict(X, parameters):
 
 
 # Predict function
-def predict(X, parameters):
+# def predict(X, parameters):
+#     # input -- X (dataset used to make prediction), papameters after training
+#     # output -- prediction
+#     W1 = tf.convert_to_tensor(value=parameters["W1"])
+#     b1 = tf.convert_to_tensor(value=parameters["b1"])
+#     W2 = tf.convert_to_tensor(value=parameters["W2"])
+#     b2 = tf.convert_to_tensor(value=parameters["b2"])
+#     W3 = tf.convert_to_tensor(value=parameters["W3"])
+#     b3 = tf.convert_to_tensor(value=parameters["b3"])
+#     W4 = tf.convert_to_tensor(value=parameters["W4"])
+#     b4 = tf.convert_to_tensor(value=parameters["b4"])
+#     params = {"W1": W1, "b1": b1, "W2": W2, "b2": b2, "W3": W3, "b3": b3, "W4": W4, "b4": b4}
+#     x = tf.compat.v1.placeholder("float")
+#     z4 = forward_propagation_for_predict(x, params)
+#     p = tf.argmax(input=z4)
+#     sess = tf.compat.v1.Session()
+#     prediction = sess.run(p, feed_dict = {x: X})
+#     return prediction
+
+def predict_probability(X, parameters,n_cell_Types):
     # input -- X (dataset used to make prediction), papameters after training
     # output -- prediction
     W1 = tf.convert_to_tensor(value=parameters["W1"])
@@ -199,12 +229,14 @@ def predict(X, parameters):
     params = {"W1": W1, "b1": b1, "W2": W2, "b2": b2, "W3": W3, "b3": b3, "W4": W4, "b4": b4}
     x = tf.compat.v1.placeholder("float")
     z4 = forward_propagation_for_predict(x, params)
-    p = tf.argmax(input=z4)
+    # z4 = tf.convert_to_tensor(z4, dtype=tf.float32)
+    #We need to do this step because otherwise it doesn't work since the 
+    z4 = tf.reshape(z4, [n_cell_Types, -1])
+    # z4 = tf.reshape(z4, [-1,n_cell_Types])
+    p = tf.nn.softmax(z4, axis=0)
     sess = tf.compat.v1.Session()
     prediction = sess.run(p, feed_dict = {x: X})
     return prediction
-
-
 # Build the model
 def model(X_train, Y_train, X_test, starting_learning_rate = 0.0001, num_epochs = 1500, minibatch_size = 128, print_cost = True):
     # input -- X_train (training set), Y_train(training labels), X_test (test set), Y_test (test labels),
@@ -289,27 +321,25 @@ if __name__ == '__main__':
     # noramlize query 
     query = scale_sets(query)
     
-    # predict 
-    test_predict = predict(query, model)
-    predicted_label = []
-    
-    for i in range(len(test_predict)):
-        predicted_label.append(label_to_type_dict[test_predict[i]])
-    
-    predicted_label = pd.DataFrame({"cell":barcode, "ACTINN":predicted_label})
-    predicted_label.to_csv(args.pred_path, sep=",", index=False)
+    df = pd.DataFrame(predict_probability(query, model,n_cell_Types = len(label_to_type_dict)))
+    df.index = [label_to_type_dict[x] for x in range(df.shape[0])]
+    df.columns = barcode
+    df = df.T
+    # test_predict.to_csv("predicted_probabilities.txt", sep="\t")
+    # Create a new column 'max_column' with the column name containing the maximum value for each row
+    df['pred_label'], df['proba_label'] = zip(*df.apply(get_max_column_and_value, axis=1))
+    df['pred_label_reject'] = df.apply(lambda row: 'Unknown' if row['proba_label'] < args.threshold else row['pred_label'], axis=1)
 
-    # make binary output matrix
-    predicted_label['prob'] = 1
-    predicted_label = predicted_label.pivot_table(index=predicted_label.columns[0], columns='ACTINN', values='prob', fill_value=0).reset_index()
+    print('@ WRITTING PREDICTIONS')
+    pred_df = pd.DataFrame({'cell': df.index, "ACTINN": df.pred_label_reject})
+    pred_df.to_csv(args.pred_path, index = False)
+    print('@ DONE')
     
-    # rename column names 
-    predicted_label.columns.name = None  # Remove the columns' name to match the R code
-    predicted_label.columns = [''] + list(predicted_label.columns[1:])
-
-    # save binary matrix
+    # Save the prob matrix
+    print('@ WRITTING PROB MATRIX ')
     out_other_path = os.path.dirname(args.pred_path)
-    predicted_label.to_csv(out_other_path + '/ACTINN_pred_score.csv', index=False)
-
+    df.to_csv(out_other_path + '/ACTINN_pred_score.csv',
+              index=True) #True because we want to conserve the rownames (cells)
+    print('@ DONE ')
 
 print("Run time:", timeit.default_timer() - run_time)

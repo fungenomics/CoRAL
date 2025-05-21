@@ -127,15 +127,12 @@ rule ontology:
      config['output_dir'] + "/model/{reference}/ontology.log"
   params:
      basedir = {workflow.basedir},
-     out = config['output_dir'],
-     reference_name = "{reference}",
      ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"],
      ontology_column = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"]
   shell:
      """
       Rscript {params.basedir}/Scripts/ontology.R \
-       {params.out} \
-       {params.reference_name} \
+       {output.ontology} \
        {input.labfile} \
        "{params.ontology_path}" \
        "{params.ontology_column}" \
@@ -150,7 +147,7 @@ rule consensus:
   input:
     results = expand(config["output_dir"] + "/{{sample}}/{{reference}}/{tool}/{tool}_pred.csv",
                      tool=tools_to_run), 
-    ontology = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"]
+    ontology_path = config['output_dir'] + "/model/{reference}/ontology/ontology.csv"
   output:
     prediction_summary = config['output_dir'] + "/{sample}/{reference}/{consensus_type}/Prediction_Summary_{ontology}.tsv"
   log: 
@@ -166,7 +163,6 @@ rule consensus:
     CAWPE_mode = config["consensus"]["type"]["CAWPE"]["mode"],
     alpha = config["consensus"]["type"]["CAWPE"]["alpha"],
     ontology_label = "{ontology}",
-    ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"], 
     accuracy_metric = config["consensus"]["type"]["CAWPE"]["accuracy_metric"]
   shell:
     """
@@ -178,7 +174,7 @@ rule consensus:
     "{params.consensus_type}" \
     "{params.min_agree}" \
     "{params.ontology_label}" \
-    "{params.ontology_path}" \
+    "{input.ontology_path}" \
     {params.metrics_file} \
     "{params.CAWPE_mode}" \
     "{params.alpha}" \
@@ -212,7 +208,7 @@ rule knit_report:
     consensus_tools = consensus_tools,
     refs = "{reference}",
     ontology_columns = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_column"],
-    ontology_path = lambda wildcards:config["references"][wildcards.reference]["ontology"]["ontology_path"], 
+    ontology_path = config['output_dir'] + "/model/{reference}/ontology/ontology.csv", 
     marker_genes = config['marker_genes'],
     cons_type = "{consensus_type}"
   threads: 1
@@ -859,7 +855,8 @@ rule predict_ACTINN:
   output:
     pred = config['output_dir'] + "/{sample}/{reference}/ACTINN/ACTINN_pred.csv"
   params:
-    basedir = {workflow.basedir}
+    basedir = {workflow.basedir},
+    threshold = config['ACTINN']['threshold']
   log:
     config['output_dir'] + "/{sample}/{reference}/ACTINN/ACTINN.log"
   benchmark:
@@ -873,6 +870,7 @@ rule predict_ACTINN:
            -ts {input.query} \
            -mp {input.model} \
            -pp {output.pred} \
+           -thr {params.threshold} \
     &> {log}
     """
 

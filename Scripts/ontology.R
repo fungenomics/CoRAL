@@ -5,20 +5,19 @@ set.seed(1234)
 args = commandArgs(trailingOnly = TRUE)
 
 out = args[1]
-reference_name = args[2]
-lab_path = args[3]
-ontology_path = args[4]                                                                                                                            
-ontology_columns = strsplit(args[5], split = ' ')[[1]]
+lab_path = args[2]
+ontology_path = args[3]                                                                                                                            
+ontology_columns = strsplit(args[4], split = ' ')[[1]]
 
 print(out)
 print(lab_path)
-print(reference_name)
 print(ontology_path)
 print(ontology_columns)
 
 #----- SAVE ONTOLOGY -----------------------------------
 
-dir.create(paste0(out, '/model/', reference_name, '/ontology/'), recursive = T)
+dir.create(dirname(out),
+           recursive = T)
 
 lab = data.table::fread(lab_path,
                         sep = ",",
@@ -32,7 +31,7 @@ if(length(ontology_columns) == 1 & ontology_columns[1] == 'label'){
   print(ont)
 
   data.table::fwrite(ont,
-                     file = paste0(out, '/model/', reference_name, '/ontology/ontology.csv'),
+                     file = out,
                      sep = ',')
 }else{
   ont = data.table::fread(ontology_path,
@@ -43,7 +42,7 @@ if(length(ontology_columns) == 1 & ontology_columns[1] == 'label'){
   ont <- ont[ont$label %in% lab$label,,drop=F]
   print(ont)
   data.table::fwrite(ont,
-                     file = paste0(out, '/model/', reference_name, '/ontology/ontology.csv'),
+                     file = out,
                      sep = ',')
 }
 
