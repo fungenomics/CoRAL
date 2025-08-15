@@ -1,6 +1,6 @@
 
 library(tidyverse)
-
+library(glue)
 initial.options = commandArgs(trailingOnly = FALSE)
 file.arg.name = "--file="
 script.name = sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)]) 
@@ -15,7 +15,6 @@ set.seed(as.numeric(args[14]))
 ref_path = args[1]
 query_paths = strsplit(args[2], split = ' ')[[1]]
 out = args[3]
-convert_genes = as.logical(args[4])
 lab_path = args[5]
 reference_name = args[6]
 query_names = strsplit(args[7], split = ' ')[[1]]
@@ -56,6 +55,27 @@ print(pipeline_mode)
 # threshold overlap genes 
 gene_overlap_threshold = as.numeric(args[15])
 
+# Reference gene convertion parameters
+convert.genes.ref = as.logical(args[4])
+if(convert.genes.ref){
+  ref.gene_map <- list(from_species = as.character(args[16]),
+                       from_gene = as.character(args[17]),
+                       to_species = as.character(args[18]),
+                       to_gene = as.character(args[19])
+  )
+}
+
+if(pipeline_mode == 'annotation'){
+  convert.genes.query = as.logical(args[20])
+  if(convert.genes.query){
+    query.gene_map <- list(from_species = as.character(args[21]),
+                           from_gene = as.character(args[22]),
+                           to_species = as.character(args[23]),
+                           to_gene = as.character(args[24])
+    )
+  }  
+}
+
 # ----- PREPROCESS REFERENCE ----------------------
 tmp <- get_data_reference(ref_path = ref_path,
                           lab_path = lab_path,
@@ -91,7 +111,7 @@ data.table::fwrite(save.df,
 rm(save.df)
 
 # if specified by user, convert reference gene names from mouse to human
-if(convert_genes){
+if(convert.genes.ref){
   
   message('@ CONVERTING GENE NAMES')
 
@@ -102,10 +122,15 @@ if(convert_genes){
   library(WGCNA)
 
   # convert
-  hg = mapfun(colnames(data[['ref']])) %>% dplyr::select(Mouse_symbol, Human_symbol) 
+  mapped.df = mapfun(genes = colnames(data[['ref']]),
+              from = ref.gene_map$from_species,
+              from_gene = ref.gene_map$from_gene,
+              to = ref.gene_map$to_species,
+              to_gene = ref.gene_map$to_gene
+              ) %>% dplyr::select(from_genes, to_genes) 
   
   # output list of mouse genes that were not converted
-  not_converted = hg %>% filter(is.na(Human_symbol)) %>% .$Mouse_symbol
+  not_converted = mapped.df %>% filter(is.na(to_genes)) %>% .$from_genes
   
   data.table::fwrite(as.list(not_converted), file = paste0(out, '/model/', reference_name, '/genes_not_converted.csv'), sep = ',')
 
@@ -118,13 +143,13 @@ if(convert_genes){
   # modify reference matrix to contain converted genes
   data[['ref']] = data[['ref']] %>%
     transposeBigData() %>%
-    rownames_to_column('Mouse_symbol') %>%
-    inner_join(hg %>% filter(!is.na(Human_symbol)), 
-               by = 'Mouse_symbol') %>%
-    dplyr::select(-Mouse_symbol) %>%
-    column_to_rownames('Human_symbol') %>%
+    rownames_to_column('from_genes') %>%
+    inner_join(mapped.df %>% filter(!is.na(to_genes)), 
+               by = 'from_genes') %>%
+    dplyr::select(-from_genes) %>%
+    column_to_rownames('to_genes') %>%
     transposeBigData() 
-
+  
 }
 
 # ----- QUERY --------------------------------
@@ -138,6 +163,47 @@ if(pipeline_mode == "annotation"){
   
     print(query)
     data[[query]] = tmp
+    
+    # if specified by user, convert reference gene names from mouse to human
+    if(convert.genes.query){
+      
+      message('@ CONVERTING GENE NAMES')
+      
+      # include functions and libraries for conversion
+      library(Orthology.eg.db)
+      library(org.Mm.eg.db)
+      library(org.Hs.eg.db)
+      library(WGCNA)
+      
+      # convert
+      mapped.df = mapfun(genes = colnames(data[[query]]),
+                         from = query.gene_map$from_species,
+                         from_gene = query.gene_map$from_gene,
+                         to = query.gene_map$to_species,
+                         to_gene = query.gene_map$to_gene
+      ) %>% dplyr::select(from_genes, to_genes) 
+      
+      # output list of mouse genes that were not converted
+      not_converted = mapped.df %>% filter(is.na(to_genes)) %>% .$from_genes
+      
+      data.table::fwrite(as.list(not_converted), file = paste0(out, '/', query, '/', reference_name, '/genes_not_converted.csv'), sep = ',')
+      # throw error if more than threshold % genes not converted
+      threshold = 0.5
+      if(length(not_converted) > threshold*length(colnames(data[[query]]))){
+        stop(paste0("@ More than ",threshold*100,"% of mouse genes in reference could not be converted to human"))
+      }
+      
+      # modify reference matrix to contain converted genes
+      data[[query]] = data[[query]] %>%
+        transposeBigData() %>%
+        rownames_to_column('from_genes') %>%
+        inner_join(mapped.df %>% filter(!is.na(to_genes)), 
+                   by = 'from_genes') %>%
+        dplyr::select(-from_genes) %>%
+        column_to_rownames('to_genes') %>%
+        transposeBigData() 
+      
+    }
   }
 }
 
@@ -187,7 +253,12 @@ for(ft_mth in feature_selection_method){
     })
   }
   #----- SAVE DATA ----------------------------------------
+  #Check if there is ANY cell with all zero values across features in reference
+  if(any(rowSums(data.it[['ref']]) == 0)){
+    stop("@ After processing the reference contains cells with zeros across all features. Remove them and re run the pipeline")
+  }
   # save reference 
+  
   tmp = data.it[['ref']] %>% rownames_to_column()
   colnames(tmp)[1] = " "
   
@@ -201,7 +272,9 @@ for(ft_mth in feature_selection_method){
   query_names = names(data.it)[!names(data.it) == 'ref']
   for(q in query_names){
     print(q)
-    
+    if(any(rowSums(data.it[[q]]) == 0)){
+      stop(glue("@ After processing the query {q} contains cells with zeros across all features. Remove them and re run the pipeline"))
+    } 
     tmp = data.it[[q]] %>% rownames_to_column()
     colnames(tmp)[1] = " "
     

@@ -1,7 +1,7 @@
 # load libraries and arguments 
 library(rBayesianOptimization)
 library(tidyverse)
-
+library(glue)
 initial.options = commandArgs(trailingOnly = FALSE)
 file.arg.name = "--file="
 script.name = sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)]) 
@@ -52,6 +52,15 @@ if(batch_path == 'None'){
   batch_path = NULL
 }
 
+# Reference gene convertion parameters
+convert.genes.ref = as.logical(args[11])
+if(convert.genes.ref){
+  ref.gene_map <- list(from_species = as.character(args[12]),
+                       from_gene = as.character(args[13]),
+                       to_species = as.character(args[14]),
+                       to_gene = as.character(args[15])
+  )
+}
 print(batch_path)
 print(downsample_stratified)
 print(class(downsample_stratified))
@@ -93,6 +102,54 @@ data.table::fwrite(save.df,
                    row.names=F,
                    sep = ",")
 rm(save.df)
+
+
+# if specified by user, convert reference gene names from mouse to human
+if(convert.genes.ref){
+  
+  message('@ CONVERTING GENE NAMES')
+  
+  # include functions and libraries for conversion
+  library(Orthology.eg.db)
+  library(org.Mm.eg.db)
+  library(org.Hs.eg.db)
+  library(WGCNA)
+  
+  # convert
+  mapped.df = mapfun(genes = colnames(ref),
+                     from = ref.gene_map$from_species,
+                     from_gene = ref.gene_map$from_gene,
+                     to = ref.gene_map$to_species,
+                     to_gene = ref.gene_map$to_gene
+  ) %>% dplyr::select(from_genes, to_genes) 
+  
+  # output list of mouse genes that were not converted
+  not_converted = mapped.df %>% filter(is.na(to_genes)) %>% .$from_genes
+  
+  data.table::fwrite(as.list(not_converted), file = paste0(out_path,'/genes_not_converted.csv'), sep = ',')
+  
+  # throw error if more than threshold % genes not converted
+  threshold = 0.5
+  if(length(not_converted) > threshold*length(colnames(ref))){
+    stop(paste0("@ More than ",threshold*100,"% of mouse genes in reference could not be converted to human"))
+  }
+  
+  # modify reference matrix to contain converted genes
+  ref = ref %>%
+    transposeBigData() %>%
+    rownames_to_column('from_genes') %>%
+    inner_join(mapped.df %>% filter(!is.na(to_genes)), 
+               by = 'from_genes') %>%
+    dplyr::select(-from_genes) %>%
+    column_to_rownames('to_genes') %>%
+    transposeBigData() 
+  
+}
+
+#Check if there is ANY cell with all zero values across features in reference
+if(any(rowSums(ref) == 0)){
+  stop("@ After processing the reference contains cells with zeros across all features. Remove them and re run the pipeline")
+} 
 
 # check if cell names are in the same order in labels and ref
 order = all(as.character(rownames(labels)) == as.character(rownames(ref)))

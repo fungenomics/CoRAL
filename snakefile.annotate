@@ -23,8 +23,10 @@ samples = list(config['query_datasets'].keys())
 # set default parameters
 func.set_reference_batch_parameters(config)
 func.set_downsampling_parameters(config)
+func.set_gene_convertion_parameters(config)
+func.set_gene_convertion_parameters_query(config)
+
 func.set_ontology_parameters(config, mode = 'annotation')
-func.set_gene_conversion_parameters(config)
 func.set_benchmark_directory(config, mode = 'annotation')
 
 
@@ -41,7 +43,7 @@ func.set_reference_pretrained_parameter(config,tools_to_run)
 # get feature selection method
 feature_selection_method = func.get_feature_selection_method(config,tools_to_run)
 #print(feature_selection_method,flush=True)
-#print(config,flush=True)
+print(config,flush=True)
 
 #----------------------------------------------------
 #  Final rule all 
@@ -83,7 +85,7 @@ rule preprocess:
     labfile = lambda wildcards:config['references'][wildcards.reference]['labels'],
     batch_path = lambda wildcards:config['references'][wildcards.reference]['batch'],
     out = config['output_dir'],
-    convert_genes = lambda wildcards:config["references"][wildcards.reference]['convert_ref_mm_to_hg'],
+    convert_genes_ref = lambda wildcards:config["references"][wildcards.reference]['convert_genes']['do_convert'],
     reference_name = "{reference}",
     query_names = samples,
     min_cells_per_cluster = lambda wildcards:config["references"][wildcards.reference]['min_cells_per_cluster'],
@@ -92,14 +94,23 @@ rule preprocess:
     feature_selection_method = feature_selection_method,
     pipeline_mode = "annotation",
     random_seed = config['seed'],
-    gene_threshold = config['gene_threshold']
+    gene_threshold = config['gene_threshold'],
+    convert_ref_from_specie = lambda wildcards:config["references"][wildcards.reference]['convert_genes']['from']["specie"],
+    convert_ref_from_gene = lambda wildcards:config["references"][wildcards.reference]['convert_genes']['from']["gene"],
+    convert_ref_to_specie = lambda wildcards:config["references"][wildcards.reference]['convert_genes']['to']["specie"],
+    convert_ref_to_gene = lambda wildcards:config["references"][wildcards.reference]['convert_genes']['to']["gene"],
+    convert_genes_query = lambda wildcards:config["convert_query_genes"]['do_convert'],
+    convert_query_from_specie = lambda wildcards:config["convert_query_genes"]['from']["specie"],
+    convert_query_from_gene = lambda wildcards:config["convert_query_genes"]['from']["gene"],
+    convert_query_to_specie = lambda wildcards:config["convert_query_genes"]['to']["specie"],
+    convert_query_to_gene = lambda wildcards:config["convert_query_genes"]['to']["gene"]
   shell:
     """
     Rscript {params.basedir}/Scripts/preprocess.R \
     {input.reference} \
     "{input.query}" \
     {params.out} \
-    {params.convert_genes} \
+    {params.convert_genes_ref} \
     {params.labfile} \
     {params.reference_name} \
     "{params.query_names}" \
@@ -111,6 +122,15 @@ rule preprocess:
     "{params.pipeline_mode}" \
     "{params.random_seed}" \
     "{params.gene_threshold}" \
+    "{params.convert_ref_from_specie}" \
+    "{params.convert_ref_from_gene}" \
+    "{params.convert_ref_to_specie}" \
+    "{params.convert_ref_to_gene}" \
+    "{params.convert_genes_query}" \
+    "{params.convert_query_from_specie}" \
+    "{params.convert_query_from_gene}" \
+    "{params.convert_query_to_specie}" \
+    "{params.convert_query_to_gene}" \
     &> {log} 
     """
 

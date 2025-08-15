@@ -1,12 +1,3 @@
-
-# set parameters related to converting gene names 
-def set_gene_conversion_parameters(config):
-  for ref in config['references'].keys():
-    try:
-      config["references"][ref]['convert_ref_mm_to_hg']
-    except:
-      config["references"][ref]['convert_ref_mm_to_hg'] = False
-
 # set tools-ref parameters
 # the parameters of the output_dir for atool and the gene_filtering 
 # is specific for each reference, this allows to make more flexible
@@ -85,6 +76,110 @@ def set_benchmark_directory(config,mode):
           config["references"][ref]['output_dir_benchmark'] = ""
       else:
         sys.exit("@ In the benchmarking pipeline, all the directories should be specified")
+        
+#set parameters related to gene convertion in reference
+def set_gene_convertion_parameters(config):
+  for ref in config['references'].keys():
+    try: 
+      # If convert genes was specified, create the do_convert variable and set to true
+      config["references"][ref]['convert_genes']
+      config["references"][ref]['convert_genes']['do_convert'] = True
+      # Check if from was specified
+      try:
+        config["references"][ref]["convert_genes"]["from"]
+        # if it was, check if from specie was specified
+        try: 
+          config["references"][ref]["convert_genes"]["from"]['specie']
+        # if not, throw an error
+        except:
+          sys.exit("@ From specie should be specified. Species availables are hg or mm")
+        # if it was, check if from gene was specified
+        try: 
+          config["references"][ref]["convert_genes"]["from"]['gene']
+        # if it was not, set SYMBOL as default
+        except:
+          config["references"][ref]["convert_genes"]["from"]['gene'] = 'SYMBOL'
+      except:
+        sys.exit("@ The convertion from should be specified")
+      # Check if to was specified
+      try:
+        config["references"][ref]["convert_genes"]["to"]
+        # if it was, check if to specie was specified
+        try: 
+          config["references"][ref]["convert_genes"]["to"]['specie']
+        # if not, throw an error
+        except:
+          sys.exit("@ To specie should be specified. Species availables are hg or mm")
+        # if it was, check if to gene was specified
+        try: 
+          config["references"][ref]["convert_genes"]["from"]['gene']
+        # if it was not, set SYMBOL as default
+        except:
+          config["references"][ref]["convert_genes"]["from"]['gene'] = 'SYMBOL'
+      except:
+        sys.exit("@ The convertion to should be specified")
+    # If convert genes was not specified, set do_convert to False and set default values
+    except: 
+      config["references"][ref]['convert_genes'] = {}
+      config["references"][ref]['convert_genes']['do_convert'] = False
+      config["references"][ref]['convert_genes']['from'] = {}
+      config["references"][ref]['convert_genes']['from']['specie'] = ""
+      config["references"][ref]['convert_genes']['from']['gene'] = ""
+      config["references"][ref]['convert_genes']['to'] = {}
+      config["references"][ref]['convert_genes']['to']['specie'] = ""
+      config["references"][ref]['convert_genes']['to']['gene'] = ""
+
+#set parameters related to gene convertion in query
+def set_gene_convertion_parameters_query(config):
+  try: 
+    # If convert genes was specified, create the do_convert variable and set to true
+    config["convert_query_genes"]
+    config["convert_query_genes"]['do_convert'] = True
+      # Check if from was specified
+    try:
+      config["convert_query_genes"]["from"]
+      # if it was, check if from specie was specified
+      try: 
+        config["convert_query_genes"]["from"]['specie']
+      # if not, throw an error
+      except:
+        sys.exit("@ From specie should be specified. Species availables are hg or mm")
+      # if it was, check if from gene was specified
+      try: 
+        config["convert_query_genes"]["from"]['gene']
+      # if it was not, set SYMBOL as default
+      except:
+        config["convert_query_genes"]["from"]['gene'] = 'SYMBOL'
+    except:
+          sys.exit("@ The convertion from should be specified")
+    # Check if to was specified
+    try:
+      config["convert_query_genes"]["to"]
+      # if it was, check if to specie was specified
+      try: 
+        config["convert_query_genes"]["to"]['specie']
+      # if not, throw an error
+      except:
+        sys.exit("@ To specie should be specified. Species availables are hg or mm")
+      # if it was, check if to gene was specified
+      try: 
+        config["convert_query_genes"]["from"]['gene']
+      # if it was not, set SYMBOL as default
+      except:
+        config["convert_query_genes"]["from"]['gene'] = 'SYMBOL'
+    except:
+      sys.exit("@ The convertion to should be specified")
+    # If convert genes was not specified, set do_convert to False and set default values
+  except: 
+    config["convert_query_genes"] = {}
+    config["convert_query_genes"]['do_convert'] = False
+    config["convert_query_genes"]['from'] = {}
+    config["convert_query_genes"]['from']['specie'] = ""
+    config["convert_query_genes"]['from']['gene'] = ""
+    config["convert_query_genes"]['to'] = {}
+    config["convert_query_genes"]['to']['specie'] = ""
+    config["convert_query_genes"]['to']['gene'] = ""
+
 # set parameters related to downsampling 
 def set_downsampling_parameters(config):
   for ref in config['references'].keys():
