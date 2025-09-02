@@ -160,15 +160,39 @@ get_data_query <- function(query_path){
   return(mtx)
 }
 
-# convert mouse to human gene names 
-mapfun = function(mousegenes){
-    gns    = mapIds(org.Mm.eg.db, mousegenes, "ENTREZID", "SYMBOL")
-    mapped = AnnotationDbi::select(Orthology.eg.db, gns, "Homo_sapiens","Mus_musculus")
-    naind  = is.na(mapped$Homo_sapiens)
-    hsymb  = mapIds(org.Hs.eg.db, as.character(mapped$Homo_sapiens[!naind]), "SYMBOL", "ENTREZID")
-    out    = data.frame(Mouse_symbol = mousegenes, mapped, Human_symbol = NA)
-    out$Human_symbol[!naind] = hsymb
-    return(out)
+# convert gene_names 
+mapfun <-  function(genes,
+                    from,
+                    from_gene = "SYMBOL",
+                    to,
+                    to_gene = "SYMBOL"){
+  
+  species <- c("mm" = "Mus_Musculus",
+               "hg" = "Homo_sapiens")
+  
+  if(any(!(c(from, to) %in% names(species)))){
+    miss <- c(from, to)[!c(from, to) %in% names(species)] %>% paste0(collapse = "/")
+    stop(glue("{miss} are not founded in the provided species, the supported one are mm (Mouse) and hg (Human)"))
+  }
+  
+  db_from <- switch(from,
+                    "hg" = org.Hs.eg.db,
+                    "mm" = org.Mm.eg.db)
+  
+  db_to <- switch(to,
+                  "hg" = org.Hs.eg.db,
+                  "mm" = org.Mm.eg.db)
+  
+  gns    = mapIds(db_from, genes, "ENTREZID", from_gene)
+  mapped = AnnotationDbi::select(Orthology.eg.db, gns, as.character(species[to]),as.character(species[from]))
+  naind  = is.na(mapped[,species[to],drop = T])
+  to_symb  = mapIds(db_to, as.character(mapped[,as.character(species[to]),drop = T][!naind]), to_gene, "ENTREZID")
+  out    = data.frame(from_genes = genes,
+                      mapped,
+                      to_genes = NA)
+  out$to_genes[!naind] = to_symb
+  
+  return(out)
 }
 
 downsample = function(labels, downsample_stratified, downsample_value = 1){

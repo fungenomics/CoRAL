@@ -23,6 +23,7 @@ dt_string = now.strftime("%Y-%m-%d_%H-%M-%S")
 # set defult parameters
 func.set_reference_batch_parameters(config)
 func.set_downsampling_parameters(config)
+func.set_gene_convertion_parameters(config)
 
 func.set_benchmark_directory(config,mode = 'benchmarking')
 func.set_ontology_parameters(config,mode = 'benchmarking')
@@ -97,7 +98,12 @@ rule subset_folds:
     min_cells_per_cluster = lambda wildcards:config["references"][wildcards.reference]['min_cells_per_cluster'],
     downsample_value = lambda wildcards:config["references"][wildcards.reference]['downsample']['value'],
     downsample_stratified = lambda wildcards:config["references"][wildcards.reference]['downsample']['stratified'],
-    random_seed = config['seed']
+    random_seed = config['seed'],
+    convert_genes_ref = lambda wildcards:config["references"][wildcards.reference]['convert_genes']['do_convert'],
+    convert_ref_from_specie = lambda wildcards:config["references"][wildcards.reference]['convert_genes']['from']["specie"],
+    convert_ref_from_gene = lambda wildcards:config["references"][wildcards.reference]['convert_genes']['from']["gene"],
+    convert_ref_to_specie = lambda wildcards:config["references"][wildcards.reference]['convert_genes']['to']["specie"],
+    convert_ref_to_gene = lambda wildcards:config["references"][wildcards.reference]['convert_genes']['to']["gene"]
   threads: 1
   resources:
   shell:
@@ -113,6 +119,12 @@ rule subset_folds:
     {params.downsample_stratified} \
     {params.batch_path} \
     "{params.random_seed}" \
+    "{params.convert_genes_ref}" \
+    "{params.convert_ref_from_specie}" \
+    "{params.convert_ref_from_gene}" \
+    "{params.convert_ref_to_specie}" \
+    "{params.convert_ref_to_gene}" \
+    
     &> {log}
     """
 
