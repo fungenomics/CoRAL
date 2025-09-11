@@ -25,9 +25,6 @@ def set_reference_pretrained_parameter(config, tools_run):
           config["references"][ref]["labels"] = os.path.join(pretrain_models_path, "downsampled_labels.csv")
           config["references"][ref]['batch'] = None
           # Adjust reference parameters if necessary
-          if config["references"][ref].get('convert_ref_mm_to_hg'):
-              print("@ The original feature space of the models cannot be changed, setting convert_ref_mm_to_hg to False.")
-              config["references"][ref]['convert_ref_mm_to_hg'] = False
           if int(config["references"][ref].get('min_cells_per_cluster')) > 0:
               print("@ The original feature space of the models cannot be changed, removing min_cells_per_cluster.")
               config["references"][ref]['min_cells_per_cluster'] = 0
@@ -35,6 +32,13 @@ def set_reference_pretrained_parameter(config, tools_run):
               print("@ The original feature space of the models cannot be changed, disabling downsampling.")
               config["references"][ref]['downsample']['value'] = 0
               config["references"][ref]['downsample']['stratified'] = False
+          if config["references"][ref]['convert_genes']['do_convert']:
+              print("@ The original feature space of the models cannot be changed, disabling gene convertion.")
+              config["references"][ref]['convert_genes']['do_convert'] = False
+              config["references"][ref]['convert_genes']['from']['specie'] = ""
+              config["references"][ref]['convert_genes']['from']['gene'] = ""
+              config["references"][ref]['convert_genes']['to']['specie'] = ""
+              config["references"][ref]['convert_genes']['to']['gene'] = ""
             # Mark that pretrained models are being used
           use_pretrain = True
       # Save whether this reference uses pretrained models
