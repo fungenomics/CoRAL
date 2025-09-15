@@ -272,8 +272,16 @@ for(ft_mth in feature_selection_method){
   query_names = names(data.it)[!names(data.it) == 'ref']
   for(q in query_names){
     print(q)
-    if(any(rowSums(data.it[[q]]) == 0)){
-      stop(glue("@ After processing the query {q} contains cells with zeros across all features. Remove them and re run the pipeline"))
+    
+    prop.overl.vtor <- rowSums(data.it[[q]]) / nrow(data.it[[q]])
+    data.table::fwrite(data.frame(cellname = names(prop.overl.vtor),
+                                  proportion_non_zeros_features = as.numeric(prop.overl.vtor),
+                                  is_problematic = as.logical(prop.overl.vtor == 0)),
+                       file = paste0(out, '/', q, '/', reference_name, '/proportion_non_zeros_features.csv'),
+                       sep = ',')
+    
+    if(any(prop.overl.vtor == 0)){
+      stop(glue("@ After processing the query {q} contains cells with zeros across all features. Check the proportion_non_zeros_features.csv file on the {q} folder to find the problematic cells. Remove them and re run the pipeline"))
     } 
     tmp = data.it[[q]] %>% rownames_to_column()
     colnames(tmp)[1] = " "
