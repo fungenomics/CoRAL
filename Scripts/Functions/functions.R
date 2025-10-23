@@ -192,6 +192,9 @@ mapfun <-  function(genes,
                       to_genes = NA)
   out$to_genes[!naind] = to_symb
   
+  # Remove the duplicates
+  out$to_genes[(duplicated(out$to_genes,fromLast = T) | duplicated(out$to_genes,fromLast = F))] <- NA
+  
   return(out)
 }
 
