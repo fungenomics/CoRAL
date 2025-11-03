@@ -69,6 +69,15 @@ for(n in 1:fold){
                                     to = ontology_columns)
 
    # true <- true %>% mutate(label = factor(label, ordered = TRUE)) 
+    
+   true_train = data.table::fread(paste0(params$pred_path, '/fold', n, '/train_labels.csv'), header = T) %>%
+           column_to_rownames('V1') %>% 
+     as.data.frame()
+
+   true_train[,'label'] <- apply_ontology(df_ontology = ontology,
+                                           pred = true_train[,'label',drop=T],
+                                           from = 'label',
+                                           to = ontology_columns)
 
    # read prediction summary for fold
    pred = data.table::fread(paste0(params$pred_path, '/fold', n, '/Prediction_Summary_',ontology_columns,'.tsv'), header = T)%>%
@@ -82,11 +91,11 @@ for(n in 1:fold){
      # tmp = get_pred(pred, t, true)
      if(t == 'Dummy_Model'){
        # Add dummy prediction
-      pred.dummy <- sample(x = unique(true$label),
+      pred.dummy <- sample(x = unique(true_train$label),
                           size = nrow(true),
                           replace = T,
-                          prob = as.numeric((table(true$label) / nrow(true))[unique(true$label)]) # Probability of each category
-                     )
+                          prob = as.numeric((table(true_train$label) / nrow(true_train))[unique(true_train$label)])
+      )
    
       tmp = data.frame(class = true$label,
                        prediction = pred.dummy
