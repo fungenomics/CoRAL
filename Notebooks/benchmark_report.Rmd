@@ -39,7 +39,7 @@ plotly_empty()
 
 ```{r}
 min_agree = strsplit(params$min_agree, split = ' ')[[1]]
-tools = c(paste0('Consensus_',min_agree), strsplit(params$tools, split = ' ')[[1]])
+tools = c('Dummy_Model',paste0('Consensus_',min_agree), strsplit(params$tools, split = ' ')[[1]])
 fold = as.numeric(params$fold)
 accuracy_metric = params$accuracy_metric
 ontology_columns = params$ontology_columns
@@ -80,10 +80,23 @@ for(n in 1:fold){
    
    for(t in tools){
      # tmp = get_pred(pred, t, true)
-     tmp = data.frame(class = true$label,
-                      prediction = pred[,t,drop=T]
+     if(t == 'Dummy_Model'){
+       # Add dummy prediction
+      pred.dummy <- sample(x = unique(true$label),
+                          size = nrow(true),
+                          replace = T,
+                          prob = as.numeric((table(true$label) / nrow(true))[unique(true$label)]) # Probability of each category
+                     )
+   
+      tmp = data.frame(class = true$label,
+                       prediction = pred.dummy
                       )
-
+  
+     } else{
+      tmp = data.frame(class = true$label,
+                      prediction = pred[,t,drop=T]
+                      )  
+     }
      # list[[t]][[n]] = confusionMatrix(data = tmp$label, reference = true$label, mode = 'everything')
      list[[t]][[n]] = get_metrics(tmp)
      list[[t]][[n]]$fold = paste0('fold', n)
@@ -91,7 +104,9 @@ for(n in 1:fold){
      cm_list[[t]][[n]] <- table(tmp$prediction,tmp$class)
      #change na values to 0 
      # list[[t]][[n]]$byClass[is.na(list[[t]][[n]]$byClass)] = 0
-  }
+     
+   }
+   
 }
 
 # save list object with all stats 

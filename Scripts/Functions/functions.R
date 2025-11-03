@@ -759,7 +759,7 @@ col_fun = circlize::colorRamp2(c(0,
                                  c("#3B5B91", "#F2EFC7", "#CC0007"))
 
 cons_number = length(grep(pattern = "^Consensus_",x = tools))
-split = c(rep("Consensus",cons_number), rep('tools', length(tools)-cons_number))
+split = c('Dummy_Model',rep("Consensus",cons_number), rep('tools', length(tools)-(cons_number+1)))
 ha = columnAnnotation('N Cells' = anno_barplot(count, border = F, gp = gpar(fill = '#596475', col = '#596475')))
 
 h = Heatmap(df,
@@ -814,21 +814,30 @@ plot_n_cells_per_class = function(df){
 plot_performance_by_class <- function(metrics_label,
                                       accuracy_metric){
   mean_df <- metrics_label %>%
-    filter(!(tool %in% grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE))) %>% 
+    filter(!(tool %in% c('Dummy_Model',grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE)))) %>% 
     group_by(class) %>%
     summarise(mean_perf = mean(.data[[accuracy_metric]]), .groups = "drop") %>%
     mutate(class = reorder(class, -mean_perf),
            text = paste0("Mean\nClass: ", class,
                          "\nMean Perf.: ", round(mean_perf, 3)))
   
+  df_dummy <- metrics_label %>%
+    filter(tool == 'Dummy_Model') %>% 
+    group_by(class) %>%
+    summarise(mean_perf = mean(.data[[accuracy_metric]]), .groups = "drop") %>%
+    mutate(class = reorder(class, -mean_perf),
+           text = paste0("Method: Dummy Model \nClass: ", class,
+                         "\nPerf.: ", round(mean_perf, 3)))
+  
+  
   ntools <- metrics_label %>%
-    filter(!(tool %in% grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE))) %>% 
+    filter(!(tool %in% c('Dummy_Model',grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE)))) %>% 
     .$tool %>% 
     unique %>% 
     length
   # Main plot
   p <- metrics_label %>%
-    filter(!(tool %in% grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE))) %>% 
+    filter(!(tool %in% c('Dummy_Model',grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE)))) %>% 
     group_by(class, tool) %>%
     summarise(MacroPerformance = mean(.data[[accuracy_metric]]), .groups = "drop") %>%
     group_by(class) %>%
@@ -858,6 +867,11 @@ plot_performance_by_class <- function(metrics_label,
                inherit.aes = FALSE,
                color = "red",
                size = 2) +
+    geom_point(data = df_dummy,
+               aes(x = mean_perf, y = class, text = text),
+               inherit.aes = FALSE,
+               color = "blue",
+               size = 1) +
     notebook_theme
   
   p <- ggplotly(p, tooltip = "text") %>% toWebGL()
@@ -865,13 +879,15 @@ plot_performance_by_class <- function(metrics_label,
 }
 
 plot_performance_by_tool<- function(metrics_label, accuracy_metric){
+  
   mean_df <- metrics_label %>%
     filter(!(tool %in% grep(x = unique(.$tool), pattern = 'Consensus_', value = TRUE))) %>% 
     group_by(tool) %>%
     summarise(mean_perf = mean(.data[[accuracy_metric]]), .groups = "drop") %>%
     mutate(tool = reorder(tool, -mean_perf),
            text = paste0("Mean\nTool: ", tool,
-                         "\nMean Perf.: ", round(mean_perf, 3)))
+                         "\nMean Perf.: ", round(mean_perf, 3)),
+           col = ifelse(tool == 'Dummy_Model', 'blue','red'))
   
   nclass <- metrics_label$class %>% unique %>% length
   
@@ -904,7 +920,7 @@ plot_performance_by_tool<- function(metrics_label, accuracy_metric){
     geom_point(data = mean_df,
                aes(x = mean_perf, y = tool, text = text),
                inherit.aes = FALSE,
-               color = "red",
+               color = mean_df$col,
                size = 2) +
     notebook_theme
   p <- ggplotly(p, tooltip = "text") %>% toWebGL()
