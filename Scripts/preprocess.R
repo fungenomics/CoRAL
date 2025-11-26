@@ -273,7 +273,7 @@ for(ft_mth in feature_selection_method){
   for(q in query_names){
     print(q)
     
-    prop.overl.vtor <- rowSums(data.it[[q]]) / nrow(data.it[[q]])
+    prop.overl.vtor <- rowSums(data.it[[q]] > 0) / ncol(data.it[[q]])
     data.table::fwrite(data.frame(cellname = names(prop.overl.vtor),
                                   proportion_non_zeros_features = as.numeric(prop.overl.vtor),
                                   is_problematic = as.logical(prop.overl.vtor == 0)),
